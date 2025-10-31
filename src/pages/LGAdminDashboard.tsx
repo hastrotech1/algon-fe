@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
-import { Shield, FileText, CheckCircle, XCircle, DollarSign, LogOut, Search, Filter, Download, Eye, Menu, Plus, Edit, Trash2 } from "lucide-react";
+import { Shield, FileText, CheckCircle, XCircle, DollarSign, LogOut, Search, Filter, Download, Eye, Menu, Plus, Edit, Trash2, Upload } from "lucide-react";
 import { toast } from "sonner";
 import { Checkbox } from "../components/ui/checkbox";
 import { Label } from "../components/ui/label";
@@ -780,13 +780,18 @@ function SettingsTab() {
     }
   };
 
-  const deleteDynamicField = async (fieldId: string) => {
+  const deleteDynamicField = async (fieldId: string, fieldLabel: string) => {
+    // Show confirmation dialog
+    if (!window.confirm(`Are you sure you want to delete the field "${fieldLabel}"? This action cannot be undone and may affect existing applications.`)) {
+      return;
+    }
+
     setIsLoading(true);
     try {
       // await fetch(`/api/lg/requirements/${fieldId}`, { method: 'DELETE' });
       
-      setDynamicFields(dynamicFields.filter(field => field.id !== fieldId));
-      toast.success("Field deleted successfully");
+      setDynamicFields(dynamicFields.filter((field: any) => field.id !== fieldId));
+      toast.success(`Field "${fieldLabel}" deleted successfully`);
     } catch (error) {
       console.error('Error deleting field:', error);
       toast.error("Failed to delete field");
@@ -796,11 +801,32 @@ function SettingsTab() {
   };
 
   const handleSubmitNewField = () => {
-    if (!newField.field_label) {
+    // Validation
+    if (!newField.field_label.trim()) {
       toast.error("Field label is required");
       return;
     }
-    saveDynamicField(newField);
+    
+    if (newField.field_label.trim().length < 3) {
+      toast.error("Field label must be at least 3 characters long");
+      return;
+    }
+
+    // Check for duplicate field labels
+    const isDuplicate = dynamicFields.some((field: any) => 
+      field.field_label.toLowerCase() === newField.field_label.trim().toLowerCase() && 
+      field.id !== editingField?.id
+    );
+    
+    if (isDuplicate) {
+      toast.error("A field with this label already exists");
+      return;
+    }
+    
+    saveDynamicField({
+      ...newField,
+      field_label: newField.field_label.trim()
+    });
   };
 
   return (
@@ -811,77 +837,110 @@ function SettingsTab() {
       </div>
 
       {/* Applicant Requirement Fields Section */}
-      <Card className="rounded-xl">
-        <CardHeader>
-          <div className="flex justify-between items-start">
-            <div>
-              <CardTitle>Applicant Requirement Fields</CardTitle>
-              <CardDescription>
-                Define custom fields that applicants must complete for certificate applications
+      <Card className="rounded-xl border shadow-sm">
+        <CardHeader className="border-b border-gray-100">
+          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+            <div className="space-y-1">
+              <CardTitle className="text-lg font-semibold text-gray-900">
+                Custom Application Fields
+              </CardTitle>
+              <CardDescription className="text-sm text-gray-600">
+                Configure additional fields that applicants must complete during the application process
               </CardDescription>
             </div>
-            <Button onClick={() => setIsAddFieldModalOpen(true)} className="bg-teal-600 hover:bg-teal-700">
+            <Button 
+              onClick={() => setIsAddFieldModalOpen(true)} 
+              className="bg-teal-600 hover:bg-teal-700 text-white shadow-sm transition-all duration-200 hover:shadow-md"
+              size="sm"
+            >
               <Plus className="w-4 h-4 mr-2" />
-              Add Field
+              Add New Field
             </Button>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="p-0">
           {isLoading ? (
-            <div className="flex items-center justify-center py-8">
-              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+            <div className="flex items-center justify-center py-12">
+              <div className="flex flex-col items-center gap-3">
+                <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-teal-600"></div>
+                <p className="text-sm text-gray-500">Loading fields...</p>
+              </div>
             </div>
-          ) : (
-            <div className="overflow-x-auto">
+          ) : dynamicFields.length > 0 ? (
+            <div className="overflow-hidden">
               <Table>
                 <TableHeader>
-                  <TableRow>
-                    <TableHead>Field Label</TableHead>
-                    <TableHead>Type</TableHead>
-                    <TableHead>Required</TableHead>
-                    <TableHead className="text-right">Actions</TableHead>
+                  <TableRow className="border-b border-gray-100">
+                    <TableHead className="font-medium text-gray-700 py-4">Field Label</TableHead>
+                    <TableHead className="font-medium text-gray-700">Input Type</TableHead>
+                    <TableHead className="font-medium text-gray-700">Required</TableHead>
+                    <TableHead className="font-medium text-gray-700 text-right">Actions</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {dynamicFields.map((field) => (
-                    <TableRow key={field.id}>
-                      <TableCell className="font-medium">{field.field_label}</TableCell>
-                      <TableCell>
-                        <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-blue-100 text-blue-800 capitalize">
+                  {dynamicFields.map((field, index) => (
+                    <TableRow 
+                      key={field.id} 
+                      className={`border-b border-gray-50 hover:bg-gray-50/50 transition-colors ${
+                        index === dynamicFields.length - 1 ? 'border-b-0' : ''
+                      }`}
+                    >
+                      <TableCell className="py-4">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-lg bg-teal-50 flex items-center justify-center">
+                            {field.field_type === 'file' && <Upload className="w-4 h-4 text-teal-600" />}
+                            {field.field_type === 'text' && <FileText className="w-4 h-4 text-teal-600" />}
+                            {field.field_type === 'number' && <span className="text-xs font-bold text-teal-600">#</span>}
+                            {field.field_type === 'date' && <span className="text-xs font-bold text-teal-600">📅</span>}
+                            {field.field_type === 'dropdown' && <span className="text-xs font-bold text-teal-600">▼</span>}
+                          </div>
+                          <div>
+                            <p className="font-medium text-gray-900">{field.field_label}</p>
+                            <p className="text-xs text-gray-500 capitalize">
+                              {field.field_type === 'dropdown' ? 'Select options' : field.field_type + ' input'}
+                            </p>
+                          </div>
+                        </div>
+                      </TableCell>
+                      <TableCell className="py-4">
+                        <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-blue-50 text-blue-700 border border-blue-200 capitalize">
                           {field.field_type}
                         </span>
                       </TableCell>
-                      <TableCell>
+                      <TableCell className="py-4">
                         {field.is_required ? (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-red-50 text-red-700 border border-red-200">
+                            <span className="w-1.5 h-1.5 bg-red-500 rounded-full mr-1.5"></span>
                             Required
                           </span>
                         ) : (
-                          <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-gray-100 text-gray-800">
+                          <span className="inline-flex items-center px-3 py-1 rounded-full text-xs font-medium bg-gray-50 text-gray-700 border border-gray-200">
+                            <span className="w-1.5 h-1.5 bg-gray-400 rounded-full mr-1.5"></span>
                             Optional
                           </span>
                         )}
                       </TableCell>
-                      <TableCell className="text-right">
-                        <div className="flex gap-2 justify-end">
+                      <TableCell className="py-4 text-right">
+                        <div className="flex gap-1 justify-end">
                           <Button
                             size="sm"
-                            variant="outline"
+                            variant="ghost"
                             onClick={() => {
                               setEditingField(field);
                               setNewField(field);
                               setIsAddFieldModalOpen(true);
                             }}
+                            className="h-8 w-8 p-0 text-gray-500 hover:text-teal-600 hover:bg-teal-50"
                           >
-                            <Edit className="w-3 h-3" />
+                            <Edit className="w-3.5 h-3.5" />
                           </Button>
                           <Button
                             size="sm"
-                            variant="outline"
-                            onClick={() => deleteDynamicField(field.id)}
-                            className="text-red-600 hover:text-red-700"
+                            variant="ghost"
+                            onClick={() => deleteDynamicField(field.id, field.field_label)}
+                            className="h-8 w-8 p-0 text-gray-500 hover:text-red-600 hover:bg-red-50"
                           >
-                            <Trash2 className="w-3 h-3" />
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
                         </div>
                       </TableCell>
@@ -889,14 +948,24 @@ function SettingsTab() {
                   ))}
                 </TableBody>
               </Table>
-              
-              {dynamicFields.length === 0 && (
-                <div className="text-center py-8 text-muted-foreground">
-                  <FileText className="w-12 h-12 mx-auto mb-4 opacity-50" />
-                  <p>No custom fields configured yet</p>
-                  <p className="text-sm">Add custom fields to collect additional information from applicants</p>
-                </div>
-              )}
+            </div>
+          ) : (
+            <div className="text-center py-12 px-6">
+              <div className="w-16 h-16 mx-auto mb-4 rounded-full bg-gray-100 flex items-center justify-center">
+                <FileText className="w-8 h-8 text-gray-400" />
+              </div>
+              <h3 className="text-lg font-medium text-gray-900 mb-2">No custom fields yet</h3>
+              <p className="text-sm text-gray-500 mb-6 max-w-sm mx-auto">
+                Create custom fields to collect specific information from applicants based on your local government requirements.
+              </p>
+              <Button 
+                onClick={() => setIsAddFieldModalOpen(true)}
+                className="bg-teal-600 hover:bg-teal-700 text-white"
+                size="sm"
+              >
+                <Plus className="w-4 h-4 mr-2" />
+                Add Your First Field
+              </Button>
             </div>
           )}
         </CardContent>
@@ -904,58 +973,172 @@ function SettingsTab() {
 
       {/* Add/Edit Field Modal */}
       <Dialog open={isAddFieldModalOpen} onOpenChange={setIsAddFieldModalOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>
-              {editingField ? "Edit Field" : "Add New Field"}
-            </DialogTitle>
-            <DialogDescription>
-              Configure a custom field for applicants to complete
-            </DialogDescription>
+        <DialogContent className="sm:max-w-lg max-w-[95vw] max-h-[90vh] overflow-y-auto">
+          <DialogHeader className="space-y-3">
+            <div className="flex items-center gap-3">
+              <div className="w-10 h-10 rounded-full bg-teal-100 flex items-center justify-center">
+                {editingField ? (
+                  <Edit className="w-5 h-5 text-teal-600" />
+                ) : (
+                  <Plus className="w-5 h-5 text-teal-600" />
+                )}
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-semibold text-gray-900">
+                  {editingField ? "Edit Custom Field" : "Add New Custom Field"}
+                </DialogTitle>
+                <DialogDescription className="text-sm text-gray-600 mt-1">
+                  {editingField 
+                    ? "Modify the field configuration below" 
+                    : "Create a custom field that applicants will need to complete"
+                  }
+                </DialogDescription>
+              </div>
+            </div>
           </DialogHeader>
-          <div className="space-y-4">
+          
+          <div className="space-y-6 py-4">
+            {/* Field Label */}
             <div className="space-y-2">
-              <Label htmlFor="fieldLabel">Field Label *</Label>
+              <Label htmlFor="fieldLabel" className="text-sm font-medium text-gray-700">
+                Field Label *
+              </Label>
               <Input
                 id="fieldLabel"
                 placeholder="e.g., Letter from Community Head"
                 value={newField.field_label}
                 onChange={(e) => setNewField({...newField, field_label: e.target.value})}
-                className="rounded-lg"
+                className="rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500"
               />
+              <p className="text-xs text-gray-500">
+                This label will be displayed to applicants in the form
+              </p>
             </div>
             
+            {/* Field Type */}
             <div className="space-y-2">
-              <Label htmlFor="fieldType">Field Type *</Label>
+              <Label htmlFor="fieldType" className="text-sm font-medium text-gray-700">
+                Input Type *
+              </Label>
               <Select 
                 value={newField.field_type} 
                 onValueChange={(value) => setNewField({...newField, field_type: value})}
               >
-                <SelectTrigger className="rounded-lg">
-                  <SelectValue placeholder="Select field type" />
+                <SelectTrigger className="rounded-lg border-gray-200 focus:border-teal-500 focus:ring-teal-500">
+                  <SelectValue placeholder="Choose the type of input field" />
                 </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="text">Text</SelectItem>
-                  <SelectItem value="number">Number</SelectItem>
-                  <SelectItem value="date">Date</SelectItem>
-                  <SelectItem value="file">File Upload</SelectItem>
-                  <SelectItem value="dropdown">Dropdown</SelectItem>
+                <SelectContent className="rounded-lg">
+                  <SelectItem value="text" className="flex items-center">
+                    <div className="flex items-center gap-2">
+                      <FileText className="w-4 h-4 text-gray-500" />
+                      <div>
+                        <div className="font-medium">Text Input</div>
+                        <div className="text-xs text-gray-500">Short text responses</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="number">
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 text-center text-xs font-bold text-gray-500">#</span>
+                      <div>
+                        <div className="font-medium">Number Input</div>
+                        <div className="text-xs text-gray-500">Numeric values only</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="date">
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 text-center text-xs text-gray-500">📅</span>
+                      <div>
+                        <div className="font-medium">Date Picker</div>
+                        <div className="text-xs text-gray-500">Calendar date selection</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="file">
+                    <div className="flex items-center gap-2">
+                      <Upload className="w-4 h-4 text-gray-500" />
+                      <div>
+                        <div className="font-medium">File Upload</div>
+                        <div className="text-xs text-gray-500">Document or image upload</div>
+                      </div>
+                    </div>
+                  </SelectItem>
+                  <SelectItem value="dropdown">
+                    <div className="flex items-center gap-2">
+                      <span className="w-4 h-4 text-center text-xs font-bold text-gray-500">▼</span>
+                      <div>
+                        <div className="font-medium">Dropdown Menu</div>
+                        <div className="text-xs text-gray-500">Predefined options</div>
+                      </div>
+                    </div>
+                  </SelectItem>
                 </SelectContent>
               </Select>
+              <p className="text-xs text-gray-500">
+                Choose the most appropriate input type for the information you need
+              </p>
             </div>
             
-            <div className="flex items-center space-x-2">
+            {/* Required Field Toggle */}
+            <div className="flex items-start space-x-3 p-4 bg-gray-50 rounded-lg border border-gray-200">
               <Checkbox
                 id="isRequired"
                 checked={newField.is_required}
                 onCheckedChange={(checked) => setNewField({...newField, is_required: checked as boolean})}
+                className="mt-0.5"
               />
-              <Label htmlFor="isRequired" className="text-sm">
-                This field is required for all applications
-              </Label>
+              <div className="flex-1">
+                <Label htmlFor="isRequired" className="text-sm font-medium text-gray-700 cursor-pointer">
+                  Make this field required
+                </Label>
+                <p className="text-xs text-gray-500 mt-1">
+                  Required fields must be completed before applicants can submit their application
+                </p>
+              </div>
             </div>
+
+            {/* Preview Section */}
+            {newField.field_label && (
+              <div className="space-y-2">
+                <Label className="text-sm font-medium text-gray-700">Preview</Label>
+                <div className="p-4 bg-blue-50 rounded-lg border border-blue-200">
+                  <div className="space-y-2">
+                    <Label className="text-sm">
+                      {newField.field_label} 
+                      {newField.is_required && <span className="text-red-500 ml-1">*</span>}
+                    </Label>
+                    {newField.field_type === 'text' && (
+                      <Input placeholder={`Enter ${newField.field_label.toLowerCase()}`} disabled />
+                    )}
+                    {newField.field_type === 'number' && (
+                      <Input type="number" placeholder="0" disabled />
+                    )}
+                    {newField.field_type === 'date' && (
+                      <Input type="date" disabled />
+                    )}
+                    {newField.field_type === 'file' && (
+                      <div className="border-2 border-dashed border-gray-300 rounded-lg p-4 text-center text-gray-500 text-sm">
+                        Click to upload file
+                      </div>
+                    )}
+                    {newField.field_type === 'dropdown' && (
+                      <Select disabled>
+                        <SelectTrigger>
+                          <SelectValue placeholder="Select an option" />
+                        </SelectTrigger>
+                      </Select>
+                    )}
+                  </div>
+                </div>
+                <p className="text-xs text-gray-500">
+                  This is how the field will appear to applicants
+                </p>
+              </div>
+            )}
           </div>
-          <div className="flex gap-3">
+          
+          <div className="flex gap-3 pt-4 border-t border-gray-200">
             <Button 
               variant="outline" 
               onClick={() => {
@@ -963,16 +1146,24 @@ function SettingsTab() {
                 setEditingField(null);
                 setNewField({ field_label: "", field_type: "text", is_required: false });
               }}
-              className="flex-1"
+              className="flex-1 rounded-lg"
+              disabled={isLoading}
             >
               Cancel
             </Button>
             <Button 
               onClick={handleSubmitNewField}
-              disabled={isLoading}
-              className="flex-1 bg-teal-600 hover:bg-teal-700"
+              disabled={isLoading || !newField.field_label.trim()}
+              className="flex-1 bg-teal-600 hover:bg-teal-700 text-white rounded-lg shadow-sm disabled:opacity-50"
             >
-              {isLoading ? "Saving..." : (editingField ? "Update Field" : "Add Field")}
+              {isLoading ? (
+                <div className="flex items-center gap-2">
+                  <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin"></div>
+                  Saving...
+                </div>
+              ) : (
+                editingField ? "Update Field" : "Add Field"
+              )}
             </Button>
           </div>
         </DialogContent>
