@@ -26,7 +26,7 @@ export function ApplicationForm({ onNavigate }: ApplicationFormProps) {
     lga: "",
     village: "",
     phone: "",
-    email: "",
+    // email: "",
     profilePhoto: null as File | null,
     ninSlip: null as File | null,
     // Step 2
