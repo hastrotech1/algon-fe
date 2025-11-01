@@ -1,4 +1,4 @@
-import { useState } from "react";
+import React, { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Label } from "../components/ui/label";
@@ -23,10 +23,70 @@ export function DigitizationFlow({ onNavigate }: DigitizationFlowProps) {
     phone: "",
     lga: "",
     certificateRef: "",
-    paymentMethod: ""
+    paymentMethod: "",
+    profilePhoto: null as File | null,
+    ninSlip: null as File | null
   });
 
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
+  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
+  const [ninSlipPreview, setNinSlipPreview] = useState<string | null>(null);
+
+  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 2 * 1024 * 1024) { // 2MB limit
+        alert('File size must be less than 2MB');
+        return;
+      }
+
+      setFormData({ ...formData, profilePhoto: file });
+      
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        setPhotoPreview(e.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const removePhoto = () => {
+    setFormData({ ...formData, profilePhoto: null });
+    setPhotoPreview(null);
+    // Reset the input
+    const input = document.getElementById('profile-photo') as HTMLInputElement;
+    if (input) input.value = '';
+  };
+
+  const handleNinSlipUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+    if (file) {
+      if (file.size > 5 * 1024 * 1024) { // 5MB limit
+        alert('File size must be less than 5MB');
+        return;
+      }
+
+      setFormData({ ...formData, ninSlip: file });
+      
+      if (file.type === 'application/pdf') {
+        setNinSlipPreview('pdf');
+      } else {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          setNinSlipPreview(e.target?.result as string);
+        };
+        reader.readAsDataURL(file);
+      }
+    }
+  };
+
+  const removeNinSlip = () => {
+    setFormData({ ...formData, ninSlip: null });
+    setNinSlipPreview(null);
+    // Reset the input
+    const input = document.getElementById('nin-slip') as HTMLInputElement;
+    if (input) input.value = '';
+  };
 
   const handleNext = () => {
     if (currentStep < totalSteps) {
@@ -75,7 +135,18 @@ export function DigitizationFlow({ onNavigate }: DigitizationFlowProps) {
 
         <Card className="rounded-xl shadow-lg">
           {currentStep === 1 && (
-            <DigitizationStep1 formData={formData} setFormData={setFormData} />
+            <DigitizationStep1 
+              formData={formData} 
+              setFormData={setFormData}
+              photoPreview={photoPreview}
+              setPhotoPreview={setPhotoPreview}
+              ninSlipPreview={ninSlipPreview}
+              setNinSlipPreview={setNinSlipPreview}
+              handlePhotoUpload={handlePhotoUpload}
+              removePhoto={removePhoto}
+              handleNinSlipUpload={handleNinSlipUpload}
+              removeNinSlip={removeNinSlip}
+            />
           )}
           {currentStep === 2 && (
             <DigitizationStep2 
@@ -135,7 +206,18 @@ export function DigitizationFlow({ onNavigate }: DigitizationFlowProps) {
   );
 }
 
-function DigitizationStep1({ formData, setFormData }: any) {
+function DigitizationStep1({ 
+  formData, 
+  setFormData, 
+  photoPreview, 
+  setPhotoPreview, 
+  ninSlipPreview, 
+  setNinSlipPreview, 
+  handlePhotoUpload, 
+  removePhoto, 
+  handleNinSlipUpload, 
+  removeNinSlip 
+}: any) {
   return (
     <>
       <CardHeader>
@@ -149,6 +231,105 @@ function DigitizationStep1({ formData, setFormData }: any) {
             <p className="text-sm text-blue-900">
               You must already possess a valid hard copy certificate issued by your Local Government to use this service.
             </p>
+          </div>
+        </div>
+
+        {/* Document Uploads Row */}
+        <div className="grid md:grid-cols-2 gap-6">
+          {/* Profile Photo Upload */}
+          <div className="space-y-2">
+            <Label>Upload Profile Photo</Label>
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png"
+                onChange={handlePhotoUpload}
+                className="hidden"
+                id="profile-photo"
+              />
+              <label
+                htmlFor="profile-photo"
+                className="border-2 border-dashed border-border rounded-lg p-3 text-center hover:border-primary transition-colors cursor-pointer block"
+              >
+                <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                <p className="text-xs">Click to upload photo</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, PNG (MAX. 2MB)</p>
+              </label>
+              
+              {/* Photo Preview */}
+              {photoPreview && (
+                <div className="flex justify-center">
+                  <div className="relative">
+                    <img
+                      src={photoPreview}
+                      alt="Profile preview"
+                      className="w-16 h-16 rounded-full object-cover border-2 border-border"
+                    />
+                    <button
+                      onClick={removePhoto}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground text-center">
+                This photo will appear on your certificate.
+              </p>
+            </div>
+          </div>
+
+          {/* NIN Slip Upload */}
+          <div className="space-y-2">
+            <Label>Upload NIN Slip</Label>
+            <div className="space-y-3">
+              <input
+                type="file"
+                accept=".jpg,.jpeg,.png,.pdf"
+                onChange={handleNinSlipUpload}
+                className="hidden"
+                id="nin-slip"
+              />
+              <label
+                htmlFor="nin-slip"
+                className="border-2 border-dashed border-border rounded-lg p-3 text-center hover:border-primary transition-colors cursor-pointer block"
+              >
+                <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
+                <p className="text-xs">Click to upload NIN slip</p>
+                <p className="text-xs text-muted-foreground mt-1">JPG, PNG, PDF (MAX. 5MB)</p>
+              </label>
+              
+              {/* NIN Slip Preview */}
+              {ninSlipPreview && (
+                <div className="flex justify-center">
+                  <div className="relative">
+                    {ninSlipPreview === 'pdf' ? (
+                      <div className="w-16 h-16 bg-red-100 border-2 border-red-200 rounded-lg flex items-center justify-center">
+                        <span className="text-xs text-red-600 font-medium">PDF</span>
+                      </div>
+                    ) : (
+                      <img
+                        src={ninSlipPreview}
+                        alt="NIN slip preview"
+                        className="w-16 h-16 rounded-lg object-cover border-2 border-border"
+                      />
+                    )}
+                    <button
+                      onClick={removeNinSlip}
+                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
+                    >
+                      ×
+                    </button>
+                  </div>
+                </div>
+              )}
+              
+              <p className="text-xs text-muted-foreground text-center">
+                Upload your National ID number slip for verification.
+              </p>
+            </div>
           </div>
         </div>
 
@@ -187,7 +368,7 @@ function DigitizationStep1({ formData, setFormData }: any) {
 
         <div className="space-y-2">
           <Label>Local Government</Label>
-          <Select value={formData.lga} onValueChange={(value) => setFormData({...formData, lga: value})}>
+          <Select value={formData.lga} onValueChange={(value: string) => setFormData({...formData, lga: value})}>
             <SelectTrigger className="rounded-lg">
               <SelectValue placeholder="Select your LGA" />
             </SelectTrigger>
@@ -302,7 +483,7 @@ function DigitizationStep3({ formData, setFormData }: any) {
 
         <div className="space-y-2">
           <Label>Payment Method</Label>
-          <Select value={formData.paymentMethod} onValueChange={(value) => setFormData({...formData, paymentMethod: value})}>
+          <Select value={formData.paymentMethod} onValueChange={(value: string) => setFormData({...formData, paymentMethod: value})}>
             <SelectTrigger className="rounded-lg">
               <SelectValue placeholder="Select payment method" />
             </SelectTrigger>
