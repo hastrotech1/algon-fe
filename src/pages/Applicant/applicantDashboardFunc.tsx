@@ -1,49 +1,104 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { ApplicantDashboardDesign } from "./applicantDashboardDesign";
-import type { NavigationProps, Application } from "../../Types/types";
+import { toast } from "sonner";
+import type { Application } from "../../Types/types";
+import { applicationService } from "../../services"; // ✅ Import service
+import { useAuth } from "../../hooks/useAuth"; // ✅ Import auth hook
 
-export function ApplicantDashboard({ onNavigate }: NavigationProps) {
-  const [activeTab, setActiveTab] = useState<'overview' | 'applications' | 'certificates'>('overview');
+export function ApplicantDashboard() {
+  const navigate = useNavigate();
+  const { logout } = useAuth(); // ✅ Get logout from auth
+  const [activeTab, setActiveTab] = useState<
+    "overview" | "applications" | "certificates"
+  >("overview");
 
-  // Mock data - replace with API calls
-  const applications: Application[] = [
-    {
-      id: "APP-2025-001",
-      name: "John Doe",
-      nin: "12345678901",
-      lga: "Ikeja",
-      state: "Lagos",
-      status: "approved",
-      dateApplied: "2025-10-01",
-      dateProcessed: "2025-10-15",
-      payment: "Paid"
-    },
-    {
-      id: "APP-2025-002",
-      name: "John Doe",
-      nin: "12345678901",
-      lga: "Lagos Island",
-      state: "Lagos",
-      status: "under-review",
-      dateApplied: "2025-10-18",
-      dateProcessed: "-",
-      payment: "Paid"
+  // ✅ State for API data
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+
+  // ✅ Fetch data on component mount
+  useEffect(() => {
+    loadApplications();
+  }, []);
+
+  const loadApplications = async () => {
+    setIsLoading(true);
+    setError(null);
+
+    try {
+      // ✅ Call API service
+      const data = await applicationService.getMyApplications();
+      setApplications(data);
+    } catch (error: any) {
+      console.error("Failed to load applications:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to load applications";
+      setError(errorMessage);
+      toast.error(errorMessage);
+    } finally {
+      setIsLoading(false);
     }
-  ];
+  };
 
-  const currentApplication = applications[1];
+  // ✅ Calculate stats from real data
+  const currentApplication =
+    applications.find(
+      (app) => app.status === "under-review" || app.status === "pending"
+    ) ||
+    applications[0] ||
+    null;
 
   const stats = {
     total: applications.length,
-    approved: applications.filter(app => app.status === 'approved').length,
-    pending: applications.filter(app => app.status === 'under-review' || app.status === 'pending').length
+    approved: applications.filter((app) => app.status === "approved").length,
+    pending: applications.filter(
+      (app) => app.status === "under-review" || app.status === "pending"
+    ).length,
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
-      onNavigate('landing');
+      try {
+        await logout(); // ✅ Use auth service
+        navigate("/");
+      } catch (error) {
+        console.error("Logout error:", error);
+        // Clear local data even if API call fails
+        navigate("/");
+      }
     }
   };
+
+  // ✅ Show loading state
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading your applications...</p>
+        </div>
+      </div>
+    );
+  }
+
+  // ✅ Show error state
+  if (error && applications.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <p className="text-red-600 mb-4">{error}</p>
+          <button
+            onClick={loadApplications}
+            className="text-primary hover:underline"
+          >
+            Try Again
+          </button>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <ApplicantDashboardDesign
@@ -52,7 +107,15 @@ export function ApplicantDashboard({ onNavigate }: NavigationProps) {
       applications={applications}
       currentApplication={currentApplication}
       stats={stats}
-      onNavigate={onNavigate}
+      onNavigate={(page: string) => {
+        const routes: Record<string, string> = {
+          "application-form": "/application-form",
+          "digitization-flow": "/digitization-flow",
+          verify: "/verify",
+          "certificate-download": "/certificate-download",
+        };
+        navigate(routes[page] || "/");
+      }}
       handleLogout={handleLogout}
     />
   );

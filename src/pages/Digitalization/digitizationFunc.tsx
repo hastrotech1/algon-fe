@@ -1,11 +1,13 @@
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { DigitizationFlowDesign } from "./digitizationDesign";
 import { toast } from "sonner";
 import { useFileUpload } from "../../hooks/useFileUpload";
-import type { NavigationProps, DigitizationFormData } from "../../Types/types";
+import type { DigitizationFormData } from "../../Types/types";
 import { validateNIN, validateEmail, validatePhone } from "../../utils/validation";
 
-export function DigitizationFlow({ onNavigate }: NavigationProps) {
+export function DigitizationFlow() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
@@ -24,7 +26,6 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
   const [uploadedFile, setUploadedFile] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // Use custom file upload hooks
   const profilePhoto = useFileUpload({
     maxSizeMB: 2,
     allowedTypes: ['image/jpeg', 'image/png'],
@@ -37,11 +38,9 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
     onUpload: (file) => setFormData({ ...formData, ninSlip: file })
   });
 
-  // Step validation
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
       case 1:
-        // Identity verification
         const ninValidation = validateNIN(formData.nin);
         if (!ninValidation.valid) {
           toast.error(ninValidation.message);
@@ -78,7 +77,6 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
         return true;
 
       case 2:
-        // Certificate upload
         if (!uploadedFile) {
           toast.error("Please upload your existing certificate");
           return false;
@@ -86,7 +84,6 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
         return true;
 
       case 3:
-        // Payment
         if (!formData.paymentMethod) {
           toast.error("Please select a payment method");
           return false;
@@ -94,7 +91,6 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
         return true;
 
       case 4:
-        // Confirmation - no validation needed
         return true;
 
       default:
@@ -102,7 +98,6 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
     }
   };
 
-  // Navigation handlers
   const handleNext = () => {
     if (validateCurrentStep()) {
       if (currentStep < totalSteps) {
@@ -123,10 +118,8 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
     setIsSubmitting(true);
 
     try {
-      // Create FormData for submission
       const formDataForSubmission = new FormData();
       
-      // Add fields
       Object.keys(formData).forEach(key => {
         const typedKey = key as keyof DigitizationFormData;
         const value = formData[typedKey];
@@ -140,16 +133,9 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
         }
       });
 
-      // Mock API call - replace with actual endpoint
-      // const response = await fetch('/api/digitization/', {
-      //   method: 'POST',
-      //   body: formDataForSubmission,
-      // });
-
-      // Mock success
       toast.success("Digitization request submitted successfully!");
       setTimeout(() => {
-        onNavigate('applicant-dashboard');
+        navigate('/applicant-dashboard');
       }, 1500);
     } catch (error) {
       console.error('Submission error:', error);
@@ -161,7 +147,7 @@ export function DigitizationFlow({ onNavigate }: NavigationProps) {
 
   const handleCancel = () => {
     if (window.confirm("Are you sure you want to cancel? All entered data will be lost.")) {
-      onNavigate('applicant-dashboard');
+      navigate('/applicant-dashboard');
     }
   };
 

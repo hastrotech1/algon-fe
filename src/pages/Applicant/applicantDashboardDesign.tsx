@@ -35,7 +35,7 @@ interface ApplicantDashboardDesignProps {
   activeTab: "overview" | "applications" | "certificates";
   setActiveTab: (tab: "overview" | "applications" | "certificates") => void;
   applications: Application[];
-  currentApplication: Application;
+  currentApplication: Application | null;
   stats: {
     total: number;
     approved: number;
@@ -125,7 +125,7 @@ export function ApplicantDashboardDesign({
         </div>
 
         {/* Tab Content */}
-        {activeTab === "overview" && (
+        {activeTab === "overview" && currentApplication && (
           <OverviewTab
             stats={stats}
             currentApplication={currentApplication}

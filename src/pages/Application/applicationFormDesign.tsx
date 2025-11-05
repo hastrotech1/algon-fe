@@ -3,6 +3,7 @@ import React from "react";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+import { FileUploadZone } from "../../components/FileUploadZone";
 import {
   Card,
   CardContent,
@@ -36,12 +37,25 @@ interface ApplicationFormDesignProps {
   progress: number;
   formData: ApplicationFormData;
   setFormData: (data: ApplicationFormData) => void;
+
+  // ✅ Profile Photo Props
   photoPreview: string | null;
-  ninSlipPreview: string | null;
-  handlePhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  photoFile: File | null;
+  photoUploading: boolean;
+  photoProgress: number;
+  photoError: string | null;
+  handlePhotoUpload: (file: File) => void; // ✅ Changed to accept File directly
   removePhoto: () => void;
-  handleNinSlipUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+
+  // ✅ NIN Slip Props
+  ninSlipPreview: string | null;
+  ninSlipFile: File | null;
+  ninSlipUploading: boolean;
+  ninSlipProgress: number;
+  ninSlipError: string | null;
+  handleNinSlipUpload: (file: File) => void; // ✅ Changed to accept File directly
   removeNinSlip: () => void;
+
   handleNext: () => void;
   handleBack: () => void;
   handleSubmit: () => void;
@@ -53,10 +67,18 @@ interface Step1Props {
   formData: ApplicationFormData;
   setFormData: (data: ApplicationFormData) => void;
   photoPreview: string | null;
-  ninSlipPreview: string | null;
-  handlePhotoUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  photoFile: File | null;
+  photoUploading: boolean;
+  photoProgress: number;
+  photoError: string | null;
+  handlePhotoUpload: (file: File) => void;
   removePhoto: () => void;
-  handleNinSlipUpload: (e: React.ChangeEvent<HTMLInputElement>) => void;
+  ninSlipPreview: string | null;
+  ninSlipFile: File | null;
+  ninSlipUploading: boolean;
+  ninSlipProgress: number;
+  ninSlipError: string | null;
+  handleNinSlipUpload: (file: File) => void;
   removeNinSlip: () => void;
 }
 
@@ -85,7 +107,15 @@ export function ApplicationFormDesign({
   formData,
   setFormData,
   photoPreview,
+  photoFile,
+  photoUploading,
+  photoProgress,
+  photoError,
   ninSlipPreview,
+  ninSlipFile,
+  ninSlipUploading,
+  ninSlipProgress,
+  ninSlipError,
   handlePhotoUpload,
   removePhoto,
   handleNinSlipUpload,
@@ -125,9 +155,17 @@ export function ApplicationFormDesign({
               formData={formData}
               setFormData={setFormData}
               photoPreview={photoPreview}
-              ninSlipPreview={ninSlipPreview}
+              photoFile={photoFile}
+              photoUploading={photoUploading}
+              photoProgress={photoProgress}
+              photoError={photoError}
               handlePhotoUpload={handlePhotoUpload}
               removePhoto={removePhoto}
+              ninSlipPreview={ninSlipPreview}
+              ninSlipFile={ninSlipFile}
+              ninSlipUploading={ninSlipUploading}
+              ninSlipProgress={ninSlipProgress}
+              ninSlipError={ninSlipError}
               handleNinSlipUpload={handleNinSlipUpload}
               removeNinSlip={removeNinSlip}
             />
@@ -197,13 +235,22 @@ export function ApplicationFormDesign({
 // ============================================================================
 
 // Step 1: Personal Details
+// Step 1: Personal Details
 function Step1({
   formData,
   setFormData,
   photoPreview,
-  ninSlipPreview,
+  photoFile,
+  photoUploading,
+  photoProgress,
+  photoError,
   handlePhotoUpload,
   removePhoto,
+  ninSlipPreview,
+  ninSlipFile,
+  ninSlipUploading,
+  ninSlipProgress,
+  ninSlipError,
   handleNinSlipUpload,
   removeNinSlip,
 }: Step1Props) {
@@ -218,99 +265,51 @@ function Step1({
         <div className="grid md:grid-cols-2 gap-6">
           {/* Profile Photo Upload */}
           <div className="space-y-2">
-            <Label htmlFor="profile-photo">Upload Profile Photo *</Label>
-            <div className="space-y-3">
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png"
-                onChange={handlePhotoUpload}
-                className="hidden"
-                id="profile-photo"
-              />
-              <label
-                htmlFor="profile-photo"
-                className="border-2 border-dashed border-border rounded-lg p-3 text-center hover:border-primary transition-colors cursor-pointer block"
-              >
-                <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                <p className="text-xs">Click to upload photo</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  JPG, PNG (MAX. 2MB)
-                </p>
-              </label>
-
-              {photoPreview && (
-                <div className="flex justify-center">
-                  <div className="relative">
-                    <img
-                      src={photoPreview}
-                      alt="Profile preview"
-                      className="w-16 h-16 rounded-full object-cover border-2 border-border"
-                    />
-                    <button
-                      type="button"
-                      onClick={removePhoto}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Label>Profile Photo *</Label>
+            <FileUploadZone
+              onFileSelect={handlePhotoUpload}
+              preview={photoPreview}
+              fileName={photoFile?.name}
+              fileSize={photoFile?.size}
+              isUploading={photoUploading}
+              uploadProgress={photoProgress}
+              error={photoError}
+              onRemove={removePhoto}
+              accept={{
+                'image/jpeg': ['.jpg', '.jpeg'],
+                'image/png': ['.png'],
+              }}
+              maxSizeMB={2}
+              label="Upload Profile Photo"
+              description="Passport-style photo"
+            />
           </div>
 
           {/* NIN Slip Upload */}
           <div className="space-y-2">
-            <Label htmlFor="nin-slip">Upload NIN Slip *</Label>
-            <div className="space-y-3">
-              <input
-                type="file"
-                accept=".jpg,.jpeg,.png,.pdf"
-                onChange={handleNinSlipUpload}
-                className="hidden"
-                id="nin-slip"
-              />
-              <label
-                htmlFor="nin-slip"
-                className="border-2 border-dashed border-border rounded-lg p-3 text-center hover:border-primary transition-colors cursor-pointer block"
-              >
-                <Upload className="w-5 h-5 mx-auto mb-1 text-muted-foreground" />
-                <p className="text-xs">Click to upload NIN slip</p>
-                <p className="text-xs text-muted-foreground mt-1">
-                  JPG, PNG, PDF (MAX. 5MB)
-                </p>
-              </label>
-
-              {ninSlipPreview && (
-                <div className="flex justify-center">
-                  <div className="relative">
-                    {ninSlipPreview === "pdf" ? (
-                      <div className="w-16 h-16 bg-red-100 border-2 border-red-200 rounded-lg flex items-center justify-center">
-                        <span className="text-xs text-red-600 font-medium">
-                          PDF
-                        </span>
-                      </div>
-                    ) : (
-                      <img
-                        src={ninSlipPreview}
-                        alt="NIN slip preview"
-                        className="w-16 h-16 rounded-lg object-cover border-2 border-border"
-                      />
-                    )}
-                    <button
-                      type="button"
-                      onClick={removeNinSlip}
-                      className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white rounded-full flex items-center justify-center text-xs hover:bg-red-600 transition-colors"
-                    >
-                      ×
-                    </button>
-                  </div>
-                </div>
-              )}
-            </div>
+            <Label>NIN Slip *</Label>
+            <FileUploadZone
+              onFileSelect={handleNinSlipUpload}
+              preview={ninSlipPreview}
+              fileName={ninSlipFile?.name}
+              fileSize={ninSlipFile?.size}
+              isUploading={ninSlipUploading}
+              uploadProgress={ninSlipProgress}
+              error={ninSlipError}
+              onRemove={removeNinSlip}
+              accept={{
+                'image/jpeg': ['.jpg', '.jpeg'],
+                'image/png': ['.png'],
+                'application/pdf': ['.pdf'],
+              }}
+              maxSizeMB={5}
+              label="Upload NIN Slip"
+              description="PDF or image"
+            />
           </div>
         </div>
 
+        {/* Rest of the form fields - keep as is */}
         <div className="grid md:grid-cols-2 gap-4">
           <div className="space-y-2">
             <Label htmlFor="fullName">Full Name *</Label>

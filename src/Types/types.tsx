@@ -8,27 +8,6 @@
 import { ComponentType } from 'react';
 
 // ============================================================================
-// NAVIGATION & ROUTING
-// ============================================================================
-
-export interface NavigationProps {
-  onNavigate: (page: string) => void;
-}
-
-export type PageType = 
-  | 'landing'
-  | 'login'
-  | 'register'
-  | 'application-form'
-  | 'applicant-dashboard'
-  | 'lg-admin-dashboard'
-  | 'super-admin-dashboard'
-  | 'admin-onboarding'
-  | 'digitization-flow'
-  | 'certificate-download'
-  | 'verify';
-
-// ============================================================================
 // USER & AUTHENTICATION
 // ============================================================================
 
@@ -146,6 +125,16 @@ export interface DigitizationStepProps {
 }
 
 // ============================================================================
+// LOCAL GOVERNMENT & SUPER ADMIN
+// ============================================================================
+
+export interface MonthlyData {
+  month: string;
+  applications: number;
+  revenue?: number;
+}
+
+// ============================================================================
 // CERTIFICATE
 // ============================================================================
 
@@ -162,8 +151,15 @@ export interface Certificate {
   downloadUrl?: string;
 }
 
-export interface CertificateDownloadProps extends NavigationProps {
-  isDigitized?: boolean;
+export interface CertificateVerificationData {
+  holderName: string;
+  certificateId: string;
+  lga: string;
+  state: string;
+  issueDate: string;
+  status: string;
+  nin?: string;
+  expiryDate?: string;
 }
 
 // ============================================================================

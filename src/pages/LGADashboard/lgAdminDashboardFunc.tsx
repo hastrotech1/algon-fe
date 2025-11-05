@@ -1,120 +1,63 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { LGAdminDashboardDesign } from "./lgAdminDashboardDesign";
 import { toast } from "sonner";
-import type { NavigationProps, Application, DigitizationRequest, DynamicField } from "../../Types/types";
+import type { Application, DigitizationRequest, DynamicField } from "../../Types/types";
+import { applicationService, digitizationService, adminService } from "../../services"; // ✅ Import services
+import { useAuth } from "../../hooks/useAuth";
 
-export function LGAdminDashboard({ onNavigate }: NavigationProps) {
+export function LGAdminDashboard() {
+  const navigate = useNavigate();
+  const { logout, user } = useAuth();
   const [activeTab, setActiveTab] = useState<'dashboard' | 'applications' | 'digitization' | 'reports' | 'settings'>('dashboard');
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
-  // Mock data - replace with API calls
-  const applications: Application[] = [
-    {
-      id: "APP-2025-001",
-      name: "John Oluwaseun Doe",
-      nin: "12345678901",
-      status: "pending",
-      payment: "Paid",
-      dateProcessed: "2025-10-18",
-      dateApplied: "2025-10-10",
-      village: "Agege",
-      lga: "Ikeja",
-      state: "Lagos"
-    },
-    {
-      id: "APP-2025-002",
-      name: "Amina Bello Mohammed",
-      nin: "98765432109",
-      status: "under-review",
-      payment: "Paid",
-      dateProcessed: "2025-10-17",
-      dateApplied: "2025-10-10",
-      village: "Ikeja",
-      lga: "Ikeja",
-      state: "Lagos"
-    },
-    {
-      id: "APP-2025-003",
-      name: "Chukwu Emeka Okafor",
-      nin: "55566677788",
-      status: "approved",
-      payment: "Paid",
-      dateProcessed: "2025-10-15",
-      dateApplied: "2025-10-10",
-      village: "Oshodi",
-      lga: "Ikeja",
-      state: "Lagos"
-    },
-    {
-      id: "APP-2025-004",
-      name: "Fatima Ibrahim Hassan",
-      nin: "11122233344",
-      status: "rejected",
-      payment: "Paid",
-      dateProcessed: "2025-10-14",
-      dateApplied: "2025-10-10",
-      village: "Mushin",
-      lga: "Ikeja",
-      state: "Lagos"
+  // ✅ State for API data
+  const [applications, setApplications] = useState<Application[]>([]);
+  const [digitizationRequests, setDigitizationRequests] = useState<DigitizationRequest[]>([]);
+  const [dynamicFields, setDynamicFields] = useState<DynamicField[]>([]);
+  const [weeklyData, setWeeklyData] = useState<any[]>([]);
+  const [approvalData, setApprovalData] = useState<any[]>([]);
+  const [isLoading, setIsLoading] = useState(true);
+
+  // ✅ Fetch data on mount
+  useEffect(() => {
+    loadDashboardData();
+  }, [activeTab]);
+
+  const loadDashboardData = async () => {
+    setIsLoading(true);
+    
+    try {
+      // ✅ Load different data based on active tab
+      if (activeTab === 'dashboard') {
+        const [appsData, statsData] = await Promise.all([
+          applicationService.getAllApplications({ limit: 10 }),
+          adminService.getDashboardStats(),
+        ]);
+        
+        setApplications(appsData.results || []);
+        setWeeklyData(statsData.weeklyData || []);
+        setApprovalData(statsData.approvalData || []);
+      } else if (activeTab === 'applications') {
+        const data = await applicationService.getAllApplications();
+        setApplications(data.results || []);
+      } else if (activeTab === 'digitization') {
+        const data = await digitizationService.getAllDigitizationRequests();
+        setDigitizationRequests(data.results || []);
+      } else if (activeTab === 'settings') {
+        const fields = await adminService.getDynamicFields();
+        setDynamicFields(fields || []);
+      }
+    } catch (error: any) {
+      console.error('Failed to load dashboard data:', error);
+      toast.error(error.response?.data?.message || 'Failed to load data');
+    } finally {
+      setIsLoading(false);
     }
-  ];
-
-  const digitizationRequests: DigitizationRequest[] = [
-    {
-      id: "DIGI-2025-001",
-      name: "Taiwo Adebayo Ogunleye",
-      nin: "33344455566",
-      status: "pending",
-      payment: "Paid",
-      date: "2025-10-20",
-      certificateRef: "CERT-IKJ-2018-123",
-      uploadPreview: "certificate_scan.pdf"
-    },
-    {
-      id: "DIGI-2025-002",
-      name: "Grace Onyinye Nwankwo",
-      nin: "77788899900",
-      status: "under-review",
-      payment: "Paid",
-      date: "2025-10-19",
-      certificateRef: "",
-      uploadPreview: "old_cert.jpg"
-    },
-    {
-      id: "DIGI-2025-003",
-      name: "Ibrahim Musa Yusuf",
-      nin: "44455566677",
-      status: "approved",
-      payment: "Paid",
-      date: "2025-10-16",
-      certificateRef: "CERT-IKJ-2015-078",
-      uploadPreview: "certificate.pdf"
-    }
-  ];
-
-  const [dynamicFields, setDynamicFields] = useState<DynamicField[]>([
-    { id: "1", field_label: "Letter from Traditional Ruler", field_type: "file", is_required: true },
-    { id: "2", field_label: "Proof of Residence", field_type: "file", is_required: true },
-    { id: "3", field_label: "Community Leader Endorsement", field_type: "text", is_required: false }
-  ]);
-
-  const weeklyData = [
-    { name: 'Mon', value: 12 },
-    { name: 'Tue', value: 19 },
-    { name: 'Wed', value: 15 },
-    { name: 'Thu', value: 22 },
-    { name: 'Fri', value: 18 },
-    { name: 'Sat', value: 8 },
-    { name: 'Sun', value: 5 }
-  ];
-
-  const approvalData = [
-    { name: 'Approved', value: 145, color: '#10b981' },
-    { name: 'Pending', value: 23, color: '#f59e0b' },
-    { name: 'Rejected', value: 12, color: '#ef4444' }
-  ];
+  };
 
   const filteredApplications = applications.filter(app => {
     const matchesSearch = app.name.toLowerCase().includes(searchTerm.toLowerCase()) || 
@@ -124,27 +67,54 @@ export function LGAdminDashboard({ onNavigate }: NavigationProps) {
     return matchesSearch && matchesStatus;
   });
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     if (window.confirm("Are you sure you want to logout?")) {
-      onNavigate('landing');
+      try {
+        await logout();
+        navigate('/');
+      } catch (error) {
+        navigate('/');
+      }
     }
   };
 
-  const handleAddDynamicField = (field: Omit<DynamicField, 'id'>) => {
-    const newField: DynamicField = {
-      ...field,
-      id: (dynamicFields.length + 1).toString()
-    };
-    setDynamicFields([...dynamicFields, newField]);
-    toast.success("Field added successfully");
+  // ✅ Real handler for adding dynamic field
+  const handleAddDynamicField = async (field: Omit<DynamicField, 'id'>) => {
+    try {
+      const newField = await adminService.createDynamicField(field);
+      setDynamicFields([...dynamicFields, newField]);
+      toast.success("Field added successfully");
+    } catch (error: any) {
+      console.error('Failed to add field:', error);
+      toast.error(error.response?.data?.message || 'Failed to add field');
+    }
   };
 
-  const handleDeleteDynamicField = (fieldId: string, fieldLabel: string) => {
+  // ✅ Real handler for deleting dynamic field
+  const handleDeleteDynamicField = async (fieldId: string, fieldLabel: string) => {
     if (window.confirm(`Are you sure you want to delete "${fieldLabel}"?`)) {
-      setDynamicFields(dynamicFields.filter(field => field.id !== fieldId));
-      toast.success(`Field "${fieldLabel}" deleted successfully`);
+      try {
+        await adminService.deleteDynamicField(fieldId);
+        setDynamicFields(dynamicFields.filter(field => field.id !== fieldId));
+        toast.success(`Field "${fieldLabel}" deleted successfully`);
+      } catch (error: any) {
+        console.error('Failed to delete field:', error);
+        toast.error(error.response?.data?.message || 'Failed to delete field');
+      }
     }
   };
+
+  // ✅ Show loading state
+  if (isLoading && applications.length === 0) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-primary border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading dashboard...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <LGAdminDashboardDesign
@@ -165,7 +135,7 @@ export function LGAdminDashboard({ onNavigate }: NavigationProps) {
       handleLogout={handleLogout}
       handleAddDynamicField={handleAddDynamicField}
       handleDeleteDynamicField={handleDeleteDynamicField}
-      onNavigate={onNavigate}
+      onNavigate={(page: string) => navigate(`/${page}`)}
     />
   );
 }

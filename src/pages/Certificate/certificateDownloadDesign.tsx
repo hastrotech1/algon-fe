@@ -1,3 +1,4 @@
+import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Card, CardContent } from "../../components/ui/card";
 import {
@@ -11,16 +12,20 @@ import {
 } from "lucide-react";
 
 interface CertificateDownloadDesignProps {
-  onNavigate: (page: string) => void;
+  onNavigate: (page: string) => void; // Temporary
   isDigitized?: boolean;
   handleDownload: () => void;
+  isDownloading: boolean;
 }
 
 export function CertificateDownloadDesign({
   onNavigate,
   isDigitized = false,
   handleDownload,
+  isDownloading,
 }: CertificateDownloadDesignProps) {
+  const navigate = useNavigate(); // ✅ Use hook for new navigation
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/10 to-white">
       {/* Header */}
@@ -185,9 +190,9 @@ export function CertificateDownloadDesign({
                   PDF Format • 1.2 MB
                 </p>
               </div>
-              <Button onClick={handleDownload}>
+              <Button onClick={handleDownload} disabled={isDownloading}>
                 <Download className="w-4 h-4 mr-2" />
-                Download PDF
+                {isDownloading ? "Downloading..." : "Download PDF"}
               </Button>
             </div>
 
@@ -203,14 +208,14 @@ export function CertificateDownloadDesign({
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => onNavigate("verify")}
+                onClick={() => navigate("/verify")} // ✅ Direct navigation
               >
                 Verify Certificate
               </Button>
               <Button
                 variant="outline"
                 className="flex-1"
-                onClick={() => onNavigate("applicant-dashboard")}
+                onClick={() => navigate("/applicant-dashboard")} // ✅ Direct navigation
               >
                 Back to Dashboard
               </Button>

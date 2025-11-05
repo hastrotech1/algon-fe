@@ -1,5 +1,5 @@
-// src/pages/Register/RegisterDesign.tsx
 import React from "react";
+import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
@@ -24,15 +24,17 @@ interface RegisterDesignProps {
   formData: RegisterFormData;
   setFormData: (data: RegisterFormData) => void;
   handleSubmit: () => void;
-  onNavigate: (page: string) => void;
+  isLoading?: boolean; // Add this
 }
 
 export function RegisterDesign({
   formData,
   setFormData,
   handleSubmit,
-  onNavigate,
+  isLoading,
 }: RegisterDesignProps) {
+  const navigate = useNavigate(); // ✅ Use hook directly
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 to-white flex items-center justify-center p-4">
       <PageContainer maxWidth="sm" className="w-full">
@@ -139,14 +141,18 @@ export function RegisterDesign({
                 </span>
               </div>
 
-              <Button onClick={handleSubmit} className="w-full rounded-lg">
-                Create Account
+              <Button
+                onClick={handleSubmit}
+                className="w-full rounded-lg"
+                disabled={isLoading}
+              >
+                {isLoading ? "Creating Account..." : "Create Account"}
               </Button>
             </div>
 
             <div className="mt-6 text-center">
               <button
-                onClick={() => onNavigate("login")}
+                onClick={() => navigate("/login")} // ✅ Direct navigation
                 className="text-sm text-primary hover:underline"
               >
                 Already have an account? Sign in
@@ -157,7 +163,7 @@ export function RegisterDesign({
 
         <div className="mt-6 text-center">
           <button
-            onClick={() => onNavigate("landing")}
+            onClick={() => navigate("/")} // ✅ Direct navigation
             className="text-sm text-muted-foreground hover:text-foreground"
           >
             ← Back to home

@@ -1,11 +1,14 @@
-// src/pages/Application/applicationFormFunc.tsx
 import { useState } from "react";
+import { useNavigate } from "react-router-dom";
 import { ApplicationFormDesign } from "./applicationFormDesign";
 import { toast } from "sonner";
-import type { NavigationProps, ApplicationFormData } from "../../Types/types";
-import { validateApplicationForm, validateFile } from "../../utils/validation";
+import type { ApplicationFormData } from "../../Types/types";
+import { validateApplicationForm } from "../../utils/validation";
+import { applicationService } from "../../services";
+import { useFileUploadEnhanced } from "../../hooks/useFileUploadEnhanced";
 
-export function ApplicationForm({ onNavigate }: NavigationProps) {
+export function ApplicationForm() {
+  const navigate = useNavigate();
   const [currentStep, setCurrentStep] = useState(1);
   const totalSteps = 4;
   const progress = (currentStep / totalSteps) * 100;
@@ -26,76 +29,27 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
     paymentMethod: "",
   });
 
-  const [photoPreview, setPhotoPreview] = useState<string | null>(null);
-  const [ninSlipPreview, setNinSlipPreview] = useState<string | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
-  // File Upload Handlers
-  const handlePhotoUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
+  // ✅ Use enhanced file upload hooks
+  const profilePhoto = useFileUploadEnhanced({
+    maxSizeMB: 2,
+    allowedTypes: ['image/jpeg', 'image/png'],
+    compressImages: true,
+    onUpload: (file) => setFormData({ ...formData, profilePhoto: file }),
+  });
 
-    const validation = validateFile(file, 2, ["image/jpeg", "image/png"]);
-    if (!validation.valid) {
-      toast.error(validation.message);
-      return;
-    }
-
-    setFormData({ ...formData, profilePhoto: file });
-
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      setPhotoPreview(e.target?.result as string);
-    };
-    reader.readAsDataURL(file);
-  };
-
-  const removePhoto = () => {
-    setFormData({ ...formData, profilePhoto: null });
-    setPhotoPreview(null);
-    const input = document.getElementById("profile-photo") as HTMLInputElement;
-    if (input) input.value = "";
-  };
-
-  const handleNinSlipUpload = (event: React.ChangeEvent<HTMLInputElement>) => {
-    const file = event.target.files?.[0];
-    if (!file) return;
-
-    const validation = validateFile(file, 5, [
-      "image/jpeg",
-      "image/png",
-      "application/pdf",
-    ]);
-    if (!validation.valid) {
-      toast.error(validation.message);
-      return;
-    }
-
-    setFormData({ ...formData, ninSlip: file });
-
-    if (file.type === "application/pdf") {
-      setNinSlipPreview("pdf");
-    } else {
-      const reader = new FileReader();
-      reader.onload = (e) => {
-        setNinSlipPreview(e.target?.result as string);
-      };
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const removeNinSlip = () => {
-    setFormData({ ...formData, ninSlip: null });
-    setNinSlipPreview(null);
-    const input = document.getElementById("nin-slip") as HTMLInputElement;
-    if (input) input.value = "";
-  };
+  const ninSlip = useFileUploadEnhanced({
+    maxSizeMB: 5,
+    allowedTypes: ['image/jpeg', 'image/png', 'application/pdf'],
+    compressImages: true,
+    onUpload: (file) => setFormData({ ...formData, ninSlip: file }),
+  });
 
   // Step Validation
   const validateCurrentStep = (): boolean => {
     switch (currentStep) {
       case 1:
-        // Personal details validation
         const personalValidation = validateApplicationForm({
           fullName: formData.fullName,
           nin: formData.nin,
@@ -116,12 +70,12 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
           return false;
         }
 
-        if (!formData.profilePhoto) {
+        if (!profilePhoto.file) {
           toast.error("Please upload a profile photo");
           return false;
         }
 
-        if (!formData.ninSlip) {
+        if (!ninSlip.file) {
           toast.error("Please upload your NIN slip");
           return false;
         }
@@ -129,7 +83,6 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
         return true;
 
       case 2:
-        // Requirements validation
         if (!formData.address.trim()) {
           toast.error("Residential address is required");
           return false;
@@ -141,7 +94,6 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
         return true;
 
       case 3:
-        // Payment validation
         if (!formData.paymentMethod) {
           toast.error("Please select a payment method");
           return false;
@@ -149,7 +101,6 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
         return true;
 
       case 4:
-        // Review step - no validation needed
         return true;
 
       default:
@@ -157,7 +108,6 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
     }
   };
 
-  // Navigation Handlers
   const handleNext = () => {
     if (validateCurrentStep()) {
       if (currentStep < totalSteps) {
@@ -178,41 +128,30 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
     setIsSubmitting(true);
 
     try {
-      // Create FormData for file upload
-      const formDataForSubmission = new FormData();
-
-      // Add form fields
-      Object.keys(formData).forEach((key) => {
-        const typedKey = key as keyof ApplicationFormData;
-        const value = formData[typedKey];
-
-        if (typedKey === "profilePhoto" && value) {
-          formDataForSubmission.append("profile_photo", value as File);
-        } else if (typedKey === "ninSlip" && value) {
-          formDataForSubmission.append("nin_slip", value as File);
-        } else if (
-          value !== null &&
-          typedKey !== "profilePhoto" &&
-          typedKey !== "ninSlip"
-        ) {
-          formDataForSubmission.append(typedKey, value as string);
-        }
-      });
-
-      // Mock API call - replace with actual endpoint
-      // const response = await fetch('/api/applications/', {
-      //   method: 'POST',
-      //   body: formDataForSubmission,
-      // });
-
-      // Mock success
-      toast.success("Application submitted successfully!");
+      const result = await applicationService.submitApplication(formData);
+      
+      console.log('Application submitted:', result);
+      
+      toast.success('Application submitted successfully!');
+      
       setTimeout(() => {
-        onNavigate("applicant-dashboard");
+        navigate('/applicant-dashboard');
       }, 1500);
-    } catch (error) {
-      console.error("Submission error:", error);
-      toast.error("Failed to submit application. Please try again.");
+    } catch (error: any) {
+      console.error('Submission error:', error);
+      
+      const errors = error.response?.data;
+      
+      if (typeof errors === 'object' && errors !== null) {
+        const firstError = Object.values(errors)[0];
+        if (Array.isArray(firstError)) {
+          toast.error(firstError[0]);
+        } else {
+          toast.error(errors.message || 'Failed to submit application');
+        }
+      } else {
+        toast.error('Failed to submit application. Please try again.');
+      }
     } finally {
       setIsSubmitting(false);
     }
@@ -224,7 +163,7 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
         "Are you sure you want to cancel your application? All entered data will be lost."
       )
     ) {
-      onNavigate("landing");
+      navigate('/');
     }
   };
 
@@ -235,12 +174,25 @@ export function ApplicationForm({ onNavigate }: NavigationProps) {
       progress={progress}
       formData={formData}
       setFormData={setFormData}
-      photoPreview={photoPreview}
-      ninSlipPreview={ninSlipPreview}
-      handlePhotoUpload={handlePhotoUpload}
-      removePhoto={removePhoto}
-      handleNinSlipUpload={handleNinSlipUpload}
-      removeNinSlip={removeNinSlip}
+      
+      // Profile Photo
+      photoPreview={profilePhoto.preview}
+      photoFile={profilePhoto.file}
+      photoUploading={profilePhoto.isUploading}
+      photoProgress={profilePhoto.uploadProgress}
+      photoError={profilePhoto.error}
+      handlePhotoUpload={profilePhoto.handleUpload}
+      removePhoto={() => profilePhoto.remove()}
+      
+      // NIN Slip
+      ninSlipPreview={ninSlip.preview}
+      ninSlipFile={ninSlip.file}
+      ninSlipUploading={ninSlip.isUploading}
+      ninSlipProgress={ninSlip.uploadProgress}
+      ninSlipError={ninSlip.error}
+      handleNinSlipUpload={ninSlip.handleUpload}
+      removeNinSlip={() => ninSlip.remove()}
+      
       handleNext={handleNext}
       handleBack={handleBack}
       handleSubmit={handleSubmit}

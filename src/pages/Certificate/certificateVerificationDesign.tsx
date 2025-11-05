@@ -1,4 +1,4 @@
-// src/pages/Certificate/certificateVerificationDesign.tsx
+import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import {
@@ -20,23 +20,40 @@ import {
 
 type VerificationResult = 'valid' | 'invalid' | null;
 
+interface CertificateData {
+  holderName: string;
+  certificateId: string;
+  lga: string;
+  state: string;
+  issueDate: string;
+  status: string;
+  nin?: string;
+  expiryDate?: string;
+}
+
+
 interface CertificateVerificationDesignProps {
   certificateId: string;
   setCertificateId: (id: string) => void;
   verificationResult: VerificationResult;
+  certificateData: CertificateData | null; // ✅ Add this
   isLoading: boolean;
   handleVerify: (e: React.FormEvent) => void;
   onNavigate: (page: string) => void;
 }
 
+
 export function CertificateVerificationDesign({
   certificateId,
   setCertificateId,
   verificationResult,
+  certificateData,
   isLoading,
   handleVerify,
   onNavigate,
 }: CertificateVerificationDesignProps) {
+  const navigate = useNavigate(); // ✅ Use hook for new navigation
+
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/10 to-white">
       {/* Header */}
@@ -54,7 +71,7 @@ export function CertificateVerificationDesign({
                 </div>
               </div>
             </div>
-            <Button variant="outline" onClick={() => onNavigate("landing")}>
+            <Button variant="outline" onClick={() => navigate('/')}> {/* ✅ Direct navigation */}
               Back to Home
             </Button>
           </div>
@@ -101,7 +118,7 @@ export function CertificateVerificationDesign({
         </Card>
 
         {/* Verification Result - Valid */}
-        {verificationResult === "valid" && (
+        {verificationResult === "valid" && certificateData && (
           <Card className="rounded-xl shadow-lg border-2 border-green-200 bg-green-50">
             <CardContent className="p-8">
               <div className="text-center mb-6">
@@ -122,7 +139,7 @@ export function CertificateVerificationDesign({
                       <p className="text-xs text-muted-foreground">
                         Certificate Holder
                       </p>
-                      <p className="text-sm">John Oluwaseun Doe</p>
+                      <p className="text-sm">{certificateData.holderName}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -131,7 +148,7 @@ export function CertificateVerificationDesign({
                       <p className="text-xs text-muted-foreground">
                         Certificate ID
                       </p>
-                      <p className="text-sm">CERT-IKJ-2025-001</p>
+                      <p className="text-sm">{certificateData.certificateId}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -140,7 +157,7 @@ export function CertificateVerificationDesign({
                       <p className="text-xs text-muted-foreground">
                         Local Government
                       </p>
-                      <p className="text-sm">Ikeja LGA, Lagos State</p>
+                      <p className="text-sm">{certificateData.lga}, {certificateData.state}</p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -149,7 +166,7 @@ export function CertificateVerificationDesign({
                       <p className="text-xs text-muted-foreground">
                         Issue Date
                       </p>
-                      <p className="text-sm">October 15, 2025</p>
+                      <p className="text-sm">{new Date(certificateData.issueDate).toLocaleDateString()}</p>
                     </div>
                   </div>
                 </div>
@@ -158,7 +175,7 @@ export function CertificateVerificationDesign({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">Status</p>
-                      <p className="text-sm text-green-600">Active • Valid</p>
+                      <p className="text-sm text-green-600">{certificateData.status}</p>
                     </div>
                     <div className="w-20 h-20 border-2 border-border rounded-lg flex items-center justify-center">
                       <div className="text-xs text-center text-muted-foreground">
