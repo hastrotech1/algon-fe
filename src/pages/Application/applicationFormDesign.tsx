@@ -25,7 +25,14 @@ import {
   DialogTitle,
 } from "../../components/ui/dialog";
 import { Textarea } from "../../components/ui/textarea";
-import { CheckCircle, ArrowLeft, ArrowRight, CreditCard, Shield, Loader2 } from "lucide-react";
+import {
+  CheckCircle,
+  ArrowLeft,
+  ArrowRight,
+  CreditCard,
+  Shield,
+  Loader2,
+} from "lucide-react";
 import {
   Logo,
   StepProgress,
@@ -44,7 +51,7 @@ interface ApplicationFormDesignProps {
   progress: number;
   formData: ApplicationFormData;
   setFormData: (data: ApplicationFormData) => void;
-  
+
   photoPreview: string | null;
   photoFile: File | null;
   photoUploading: boolean;
@@ -52,7 +59,7 @@ interface ApplicationFormDesignProps {
   photoError: string | null;
   handlePhotoUpload: (file: File) => void;
   removePhoto: () => void;
-  
+
   ninSlipPreview: string | null;
   ninSlipFile: File | null;
   ninSlipUploading: boolean;
@@ -60,12 +67,12 @@ interface ApplicationFormDesignProps {
   ninSlipError: string | null;
   handleNinSlipUpload: (file: File) => void;
   removeNinSlip: () => void;
-  
+
   certificateAmount: number;
   paymentReference: string;
   isInitializingPayment: boolean;
   handleProceedToPayment: () => void;
-  
+
   handleNext: () => void;
   handleBack: () => void;
   handleSubmit: () => void;
@@ -201,7 +208,7 @@ export function ApplicationFormDesign({
             <Step2 formData={formData} setFormData={setFormData} />
           )}
           {currentStep === 3 && (
-            <Step3 
+            <Step3
               certificateAmount={certificateAmount}
               paymentReference={paymentReference}
               isInitializingPayment={isInitializingPayment}
@@ -209,15 +216,13 @@ export function ApplicationFormDesign({
             />
           )}
           {currentStep === 4 && (
-            <Step4 
-              formData={formData}
-              paymentReference={paymentReference}
-            />
+            <Step4 formData={formData} paymentReference={paymentReference} />
           )}
 
           {/* Navigation Buttons */}
           <CardContent className="pt-0">
             <div className="flex gap-4 justify-between">
+              {/* Back Button - Show on steps 2-4 (but not on step 4 if it's review) */}
               {currentStep > 1 && currentStep !== 4 && (
                 <Button
                   variant="outline"
@@ -229,8 +234,8 @@ export function ApplicationFormDesign({
                   Back
                 </Button>
               )}
-              
-              {/* Show regular Next for steps 1-2 */}
+
+              {/* For Steps 1-2: Show Next */}
               {currentStep < 3 && (
                 <Button
                   onClick={handleNext}
@@ -241,29 +246,43 @@ export function ApplicationFormDesign({
                   <ArrowRight className="w-4 h-4 ml-2" />
                 </Button>
               )}
-              
-              {/* Show Proceed to Payment for step 3 */}
+
+              {/* For Step 3 (Payment): Show different buttons based on payment status */}
               {currentStep === 3 && (
-                <Button
-                  onClick={handleProceedToPayment}
-                  className="ml-auto rounded-lg bg-green-600 hover:bg-green-700 text-white"
-                  disabled={isInitializingPayment}
-                >
-                  {isInitializingPayment ? (
-                    <>
-                      <Loader2 className="w-4 h-4 mr-2 animate-spin" />
-                      Initializing Payment...
-                    </>
+                <>
+                  {!paymentReference ? (
+                    // Show "Proceed to Payment" if payment not initialized
+                    <Button
+                      onClick={handleProceedToPayment}
+                      className="ml-auto rounded-lg bg-primary hover:bg-primary/90"
+                      disabled={isInitializingPayment}
+                    >
+                      {isInitializingPayment ? (
+                        <>
+                          <Loader2 className="w-4 h-4 mr-2 animate-spin" />
+                          Initializing...
+                        </>
+                      ) : (
+                        <>
+                          <CreditCard className="w-4 h-4 mr-2" />
+                          Proceed to Payment
+                        </>
+                      )}
+                    </Button>
                   ) : (
-                    <>
-                      <CreditCard className="w-4 h-4 mr-2" />
-                      Proceed to Payment
-                    </>
+                    // Show "Next" if payment already initialized
+                    <Button
+                      onClick={handleNext}
+                      className="ml-auto rounded-lg bg-primary hover:bg-primary/90"
+                    >
+                      Next
+                      <ArrowRight className="w-4 h-4 ml-2" />
+                    </Button>
                   )}
-                </Button>
+                </>
               )}
-              
-              {/* Show Submit for step 4 */}
+
+              {/* For Step 4 (Review): Show Submit */}
               {currentStep === 4 && (
                 <Button
                   onClick={handleSubmit}
@@ -303,9 +322,7 @@ export function ApplicationFormDesign({
           <DialogContent className="sm:max-w-[400px]">
             <DialogHeader>
               <DialogTitle>Cancel Application?</DialogTitle>
-              <DialogDescription>
-                Your progress will be lost.
-              </DialogDescription>
+              <DialogDescription>Your progress will be lost.</DialogDescription>
             </DialogHeader>
             <DialogFooter className="gap-2 sm:gap-0">
               <Button
@@ -314,10 +331,7 @@ export function ApplicationFormDesign({
               >
                 Continue Application
               </Button>
-              <Button
-                variant="destructive"
-                onClick={handleConfirmCancel}
-              >
+              <Button variant="destructive" onClick={handleConfirmCancel}>
                 Yes, Cancel
               </Button>
             </DialogFooter>
@@ -373,8 +387,8 @@ function Step1({
               error={photoError}
               onRemove={removePhoto}
               accept={{
-                'image/jpeg': ['.jpg', '.jpeg'],
-                'image/png': ['.png'],
+                "image/jpeg": [".jpg", ".jpeg"],
+                "image/png": [".png"],
               }}
               maxSizeMB={2}
               label="Upload Profile Photo"
@@ -395,9 +409,9 @@ function Step1({
               error={ninSlipError}
               onRemove={removeNinSlip}
               accept={{
-                'image/jpeg': ['.jpg', '.jpeg'],
-                'image/png': ['.png'],
-                'application/pdf': ['.pdf'],
+                "image/jpeg": [".jpg", ".jpeg"],
+                "image/png": [".png"],
+                "application/pdf": [".pdf"],
               }}
               maxSizeMB={5}
               label="Upload NIN Slip"
@@ -579,7 +593,7 @@ function Step2({ formData, setFormData }: Step2Props) {
 }
 
 // Step 3: Payment
-function Step3({ 
+function Step3({
   certificateAmount,
   paymentReference,
   isInitializingPayment,
@@ -597,22 +611,25 @@ function Step3({
         </CardDescription>
       </CardHeader>
       <CardContent className="space-y-6">
-        
         {/* Payment Breakdown */}
         <div className="bg-secondary/20 rounded-xl p-6">
           <h4 className="font-semibold mb-4">Payment Summary</h4>
-          
+
           <div className="space-y-3">
             <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">Certificate Application Fee</span>
-              <span className="text-lg">₦{applicationFee.toLocaleString()}</span>
+              <span className="text-muted-foreground">
+                Certificate Application Fee
+              </span>
+              <span className="text-lg">
+                ₦{applicationFee.toLocaleString()}
+              </span>
             </div>
-            
+
             <div className="flex justify-between items-center text-sm">
               <span className="text-muted-foreground">Processing Fee</span>
               <span>₦{processingFee.toLocaleString()}</span>
             </div>
-            
+
             <div className="border-t border-border pt-3 flex justify-between items-center">
               <span className="font-semibold">Total Amount</span>
               <span className="text-3xl font-bold text-primary">
@@ -635,7 +652,8 @@ function Step3({
                   Reference: {paymentReference}
                 </p>
                 <p className="text-xs text-green-600 mt-2">
-                  ✓ Complete payment in the popup window, then submit your application.
+                  ✓ Complete payment in the popup window, then submit your
+                  application.
                 </p>
               </div>
             </div>
@@ -674,7 +692,7 @@ function Step3({
               256-bit SSL encryption
             </p>
           </div>
-          
+
           <div className="text-center p-4 bg-secondary/10 rounded-lg">
             <div className="w-10 h-10 bg-blue-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <CreditCard className="w-5 h-5 text-blue-600" />
@@ -684,7 +702,7 @@ function Step3({
               Card, Bank, USSD
             </p>
           </div>
-          
+
           <div className="text-center p-4 bg-secondary/10 rounded-lg">
             <div className="w-10 h-10 bg-purple-100 rounded-full flex items-center justify-center mx-auto mb-2">
               <Shield className="w-5 h-5 text-purple-600" />
@@ -699,7 +717,11 @@ function Step3({
         {/* Security Badge */}
         <div className="flex items-center justify-center gap-2 text-xs text-muted-foreground">
           <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-            <path fillRule="evenodd" d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z" clipRule="evenodd" />
+            <path
+              fillRule="evenodd"
+              d="M5 9V7a5 5 0 0110 0v2a2 2 0 012 2v5a2 2 0 01-2 2H5a2 2 0 01-2-2v-5a2 2 0 012-2zm8-2v2H7V7a3 3 0 016 0z"
+              clipRule="evenodd"
+            />
           </svg>
           <span>Your payment information is secure and encrypted</span>
         </div>
@@ -753,9 +775,11 @@ function Step4({ formData, paymentReference }: Step4Props) {
         <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-start gap-3">
           <CheckCircle className="w-5 h-5 text-green-600 mt-0.5" />
           <div className="flex-1">
-            <p className="text-sm text-green-900 font-medium">Payment Reference</p>
+            <p className="text-sm text-green-900 font-medium">
+              Payment Reference
+            </p>
             <p className="text-xs text-green-700 mt-1 font-mono">
-              {paymentReference || 'Awaiting payment'}
+              {paymentReference || "Awaiting payment"}
             </p>
             <p className="text-xs text-muted-foreground mt-2">
               Your payment will be verified when you submit this application
