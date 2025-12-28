@@ -1,13 +1,17 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { SuperAdminDashboardDesign } from "./superAdminDashboardDesign";
-import type { LocalGovernment, AuditLogEntry, MonthlyData } from "../../Types/types";
+import type {
+  LocalGovernment,
+  AuditLogEntry,
+  MonthlyData,
+} from "../../Types/types";
 import { adminService } from "../../services"; // ✅ Use service
 import { toast } from "sonner";
 
 export function SuperAdminDashboard() {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState('dashboard');
+  const [activeTab, setActiveTab] = useState("dashboard");
   const [searchTerm, setSearchTerm] = useState("");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
@@ -24,35 +28,39 @@ export function SuperAdminDashboard() {
 
   const loadData = async () => {
     setIsLoading(true);
-    
+
     try {
-      if (activeTab === 'lgas') {
+      if (activeTab === "lgas") {
         const data = await adminService.getAllLGAs();
         setLgas(data.results || []);
-      } else if (activeTab === 'audit') {
-        const data = await adminService.getAuditLog();
+      } else if (activeTab === "audit") {
+        const data = await adminService.getAuditLogs({
+          page: 1,
+          page_size: 50,
+        });
         setAuditLog(data.results || []);
-      } else if (activeTab === 'dashboard') {
-        const stats = await adminService.getDashboardStats();
-        setMonthlyData(stats.monthlyData || []);
+      } else if (activeTab === "dashboard") {
+        const dashboardData = await adminService.getSuperAdminDashboard();
+        setMonthlyData(dashboardData.charts?.monthlyApplications || []);
       }
     } catch (error: any) {
-      console.error('Failed to load data:', error);
-      toast.error('Failed to load data');
+      console.error("Failed to load data:", error);
+      toast.error("Failed to load data");
     } finally {
       setIsLoading(false);
     }
   };
 
-  const filteredLGAs = lgas.filter(lga => 
-    lga.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lga.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
-    lga.admin.toLowerCase().includes(searchTerm.toLowerCase())
+  const filteredLGAs = lgas.filter(
+    (lga) =>
+      lga.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lga.state.toLowerCase().includes(searchTerm.toLowerCase()) ||
+      lga.admin.toLowerCase().includes(searchTerm.toLowerCase())
   );
 
   const handleLogout = () => {
     if (window.confirm("Are you sure you want to logout?")) {
-      navigate('/');
+      navigate("/");
     }
   };
 

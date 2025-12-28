@@ -1,10 +1,10 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApplicationFormDesign } from "./applicationFormDesign";
 import { toast } from "sonner";
 import type { ApplicationFormData } from "../../Types/types";
 import { validateApplicationForm } from "../../utils/validation";
-import { applicationService, paymentService } from "../../services";
+import { applicationService, adminService } from "../../services";
 import { useFileUploadEnhanced } from "../../hooks/useFileUploadEnhanced";
 
 export function ApplicationForm() {
@@ -31,9 +31,47 @@ export function ApplicationForm() {
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isInitializingPayment, setIsInitializingPayment] = useState(false);
   const [paymentReference, setPaymentReference] = useState<string>("");
+  const [applicationId, setApplicationId] = useState<string>("");
+  const [certificateAmount, setCertificateAmount] = useState<number>(0);
 
-  // Fixed amount for new certificate
-  const CERTIFICATE_AMOUNT = 5500;
+  // States and LGAs
+  const [states, setStates] = useState<any[]>([]);
+  const [availableLGAs, setAvailableLGAs] = useState<any[]>([]);
+  const [loadingStates, setLoadingStates] = useState(true);
+
+  // Load states on mount
+  useEffect(() => {
+    loadStates();
+  }, []);
+
+  // Update available LGAs when state changes
+  useEffect(() => {
+    if (formData.state) {
+      const selectedState = states.find((s) => s.id === formData.state);
+      setAvailableLGAs(selectedState?.local_governtments || []);
+    } else {
+      setAvailableLGAs([]);
+    }
+  }, [formData.state, states]);
+
+  const loadStates = async () => {
+    setLoadingStates(true);
+    try {
+      const response = await adminService.getAllStatesAndLGs();
+      // Handle paginated response: { data: { count, results: [...] } }
+      const statesData = Array.isArray(response)
+        ? response
+        : response?.data?.results || response?.data || [];
+
+      console.log("Loaded states:", statesData.length, "states");
+      setStates(statesData);
+    } catch (error: any) {
+      console.error("Failed to load states:", error);
+      toast.error("Failed to load states. Please refresh the page.");
+    } finally {
+      setLoadingStates(false);
+    }
+  };
 
   // File upload hooks
   const profilePhoto = useFileUploadEnhanced({
@@ -50,32 +88,109 @@ export function ApplicationForm() {
     onUpload: (file) => setFormData({ ...formData, ninSlip: file }),
   });
 
+  // Submit step 1: Personal info and documents
+  const handleStep1Submit = async () => {
+    if (!validateCurrentStep()) return;
+
+    setIsSubmitting(true);
+    try {
+      const response = await applicationService.submitCertificateApplication({
+        date_of_birth: formData.dob,
+        email: formData.email,
+        full_name: formData.fullName,
+        landmark: formData.landmark,
+        local_government: formData.lga,
+        phone_number: formData.phone,
+        state: formData.state,
+        village: formData.village,
+        nin: formData.nin,
+        nin_slip: ninSlip.file || undefined,
+        profile_photo: profilePhoto.file || undefined,
+      });
+
+      setApplicationId(response.data.application_id);
+      toast.success("Application step 1 completed!");
+      setCurrentStep(2);
+    } catch (error: any) {
+      console.error("Step 1 submission error:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to submit application details";
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  // Submit step 2: Address and additional info
+  const handleStep2Submit = async () => {
+    if (!validateCurrentStep()) return;
+
+    if (!applicationId) {
+      toast.error("Application ID missing. Please restart the application.");
+      return;
+    }
+
+    setIsSubmitting(true);
+    try {
+      const response = await applicationService.updateApplicationStep2(
+        applicationId,
+        {
+          residential_address: formData.address,
+          landmark: formData.landmark,
+        }
+      );
+
+      // Set the fee amount from response
+      const fee = response.data.fee.application_fee || 0;
+      setCertificateAmount(fee);
+
+      toast.success("Application step 2 completed!");
+
+      // Verify NIN information
+      try {
+        await applicationService.verifyNIN(applicationId, "certificate");
+        toast.success("NIN verified successfully!");
+      } catch (ninError: any) {
+        // Non-blocking - continue even if NIN verification fails
+        console.warn("NIN verification warning:", ninError);
+        toast.warning(
+          ninError.response?.data?.message || "NIN verification pending"
+        );
+      }
+
+      setCurrentStep(3);
+    } catch (error: any) {
+      console.error("Step 2 submission error:", error);
+      const errorMessage =
+        error.response?.data?.message || "Failed to update application details";
+      toast.error(errorMessage);
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   // Initialize payment when clicking "Proceed to Payment"
   const handleProceedToPayment = async () => {
-    if (!validateCurrentStep()) return;
+    if (!applicationId) {
+      toast.error("Application ID missing. Please restart the application.");
+      return;
+    }
 
     setIsInitializingPayment(true);
 
     try {
-      // Call backend to initialize payment
-      const result = await paymentService.initializePayment({
-        email: formData.email,
-        amount: CERTIFICATE_AMOUNT,
-        metadata: {
-          applicantName: formData.fullName,
-          nin: formData.nin,
-          lga: formData.lga,
-          state: formData.state,
-          serviceType: "application",
-        },
+      const result = await applicationService.initiatePayment({
+        payment_type: "certificate",
+        application_id: applicationId,
+        amount: certificateAmount > 0 ? certificateAmount : undefined,
       });
 
-      if (result.status) {
-        setPaymentReference(result.data.reference);
+      if (result.data.status) {
+        setPaymentReference(result.data.data.reference);
 
         // Open Paystack in new window
         const paymentWindow = window.open(
-          result.data.authorization_url,
+          result.data.data.authorization_url,
           "Paystack Payment",
           "width=500,height=700,left=200,top=100"
         );
@@ -91,7 +206,7 @@ export function ApplicationForm() {
             if (paymentWindow.closed) {
               clearInterval(pollTimer);
               toast.info(
-                "Payment window closed. Please verify your payment status."
+                "Payment window closed. Please check your application status."
               );
             }
           }, 1000);
@@ -101,7 +216,9 @@ export function ApplicationForm() {
       }
     } catch (error: any) {
       console.error("Payment initialization error:", error);
-      toast.error("Failed to initialize payment. Please try again.");
+      const errorMessage =
+        error.response?.data?.message || "Failed to initialize payment";
+      toast.error(errorMessage);
     } finally {
       setIsInitializingPayment(false);
     }
@@ -165,7 +282,11 @@ export function ApplicationForm() {
   };
 
   const handleNext = () => {
-    if (validateCurrentStep()) {
+    if (currentStep === 1) {
+      handleStep1Submit();
+    } else if (currentStep === 2) {
+      handleStep2Submit();
+    } else if (validateCurrentStep()) {
       if (currentStep < totalSteps) {
         setCurrentStep(currentStep + 1);
       }
@@ -178,60 +299,17 @@ export function ApplicationForm() {
     }
   };
 
-  // Verify payment before submission
+  // Final submission - just navigate since payment was already completed
   const handleSubmit = async () => {
     if (!paymentReference) {
       toast.error("Please complete payment first");
       return;
     }
 
-    setIsSubmitting(true);
-
-    try {
-      // Verify payment first
-      const verification = await paymentService.verifyPayment(paymentReference);
-
-      if (verification.status !== "success") {
-        toast.error("Payment not verified. Please complete payment first.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      toast.success("Payment verified!");
-
-      // Submit application
-      const submissionData = {
-        ...formData,
-        paymentReference,
-      };
-
-      const result = await applicationService.submitApplication(submissionData);
-
-      console.log("Application submitted:", result);
-
-      toast.success("Application submitted successfully!");
-
-      setTimeout(() => {
-        navigate("/applicant-dashboard");
-      }, 1500);
-    } catch (error: any) {
-      console.error("Submission error:", error);
-
-      const errors = error.response?.data;
-
-      if (typeof errors === "object" && errors !== null) {
-        const firstError = Object.values(errors)[0];
-        if (Array.isArray(firstError)) {
-          toast.error(firstError[0]);
-        } else {
-          toast.error(errors.message || "Failed to submit application");
-        }
-      } else {
-        toast.error("Failed to submit application. Please try again.");
-      }
-    } finally {
-      setIsSubmitting(false);
-    }
+    toast.success("Application submitted successfully!");
+    setTimeout(() => {
+      navigate("/applicant-dashboard");
+    }, 1500);
   };
 
   const handleCancel = () => {
@@ -245,6 +323,9 @@ export function ApplicationForm() {
       progress={progress}
       formData={formData}
       setFormData={setFormData}
+      states={states}
+      availableLGAs={availableLGAs}
+      loadingStates={loadingStates}
       photoPreview={profilePhoto.preview}
       photoFile={profilePhoto.file}
       photoUploading={profilePhoto.isUploading}
@@ -259,7 +340,7 @@ export function ApplicationForm() {
       ninSlipError={ninSlip.error}
       handleNinSlipUpload={ninSlip.handleUpload}
       removeNinSlip={() => ninSlip.remove()}
-      certificateAmount={CERTIFICATE_AMOUNT}
+      certificateAmount={certificateAmount || 5500}
       paymentReference={paymentReference}
       isInitializingPayment={isInitializingPayment}
       handleProceedToPayment={handleProceedToPayment}

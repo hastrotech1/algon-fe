@@ -1,9 +1,6 @@
 import apiClient from "./api";
 import { tokenManager } from "../utils/tokenManager";
 import type { UserRole } from "../Types/types";
-import { mockAuthService } from "./mock.service";
-
-const USE_MOCK = true;
 
 export interface LoginRequest {
   email: string;
@@ -26,56 +23,105 @@ export interface LoginResponse {
 export interface RegisterRequest {
   nin: string;
   email: string;
-  phone: string;
+  phone_number: string;
   password: string;
+  role?: string;
 }
 
 class AuthService {
   async login(credentials: LoginRequest): Promise<LoginResponse> {
-    if (USE_MOCK) {
-      return mockAuthService.login(credentials.email, credentials.password);
-    }
+    // Real API call to /api/auth/login
+    // API expects application/x-www-form-urlencoded
+    const formData = new URLSearchParams();
+    formData.append("email", credentials.email);
+    formData.append("password", credentials.password);
 
-    const response = await apiClient.post<LoginResponse>(
-      "/auth/login/",
-      credentials
-    );
+    const response = await apiClient.post<{
+      message: string;
+      user_id: string;
+      role: string;
+      "refresh-token": string;
+      "access-token": string;
+    }>("/api/auth/login", formData, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
+
+    // Map API response to internal format
+    const loginData: LoginResponse = {
+      access: response.data["access-token"],
+      refresh: response.data["refresh-token"],
+      user: {
+        id: response.data.user_id,
+        email: credentials.email,
+        role: response.data.role as UserRole,
+        name: credentials.email.split("@")[0], // Extract name from email
+      },
+    };
 
     // Store tokens and user data
-    tokenManager.setAccessToken(response.data.access);
-    tokenManager.setRefreshToken(response.data.refresh);
-    tokenManager.setUserData(response.data.user);
+    tokenManager.setAccessToken(loginData.access);
+    tokenManager.setRefreshToken(loginData.refresh);
+    tokenManager.setUserData(loginData.user);
 
-    return response.data;
+    return loginData;
   }
 
   async register(data: RegisterRequest): Promise<LoginResponse> {
-    if (USE_MOCK) {
-      return mockAuthService.register(data);
-    }
+    // Determine role for endpoint - default to 'applicant'
+    const role = data.role || "applicant";
 
-    const response = await apiClient.post<LoginResponse>(
-      "/auth/register/",
-      data
-    );
+    // API expects application/x-www-form-urlencoded
+    const formData = new URLSearchParams();
+    formData.append("email", data.email);
+    formData.append("phone_number", data.phone_number);
+    formData.append("password", data.password);
+    formData.append("nin", data.nin);
 
-    // Auto-login after registration
-    tokenManager.setAccessToken(response.data.access);
-    tokenManager.setRefreshToken(response.data.refresh);
-    tokenManager.setUserData(response.data.user);
+    const response = await apiClient.post<{
+      message: string;
+      data: Array<{
+        user_id: string;
+        email: string;
+        role: string;
+        phone_number: string;
+      }>;
+    }>(`/api/register/${role}`, formData, {
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+    });
 
-    return response.data;
+    // Note: Real API doesn't return tokens on registration
+    // User needs to login separately
+    const userData = response.data.data[0];
+
+    return {
+      access: "", // Will need to login separately
+      refresh: "",
+      user: {
+        id: userData.user_id,
+        email: userData.email,
+        role: userData.role as UserRole,
+        name: userData.email.split("@")[0], // Extract name from email
+        phone: userData.phone_number,
+        nin: data.nin,
+      },
+    };
   }
 
   async logout(): Promise<void> {
     try {
-      if (USE_MOCK) {
-        await mockAuthService.logout();
-      } else {
-        const refreshToken = tokenManager.getRefreshToken();
-        if (refreshToken) {
-          await apiClient.post("/auth/logout/", { refresh: refreshToken });
-        }
+      const accessToken = tokenManager.getAccessToken();
+      const refreshToken = tokenManager.getRefreshToken();
+
+      if (accessToken && refreshToken) {
+        // Real API requires both tokens in request body
+        await apiClient.post("/api/auth/logout", {
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
       }
     } catch (error) {
       console.error("Logout error:", error);
@@ -85,10 +131,7 @@ class AuthService {
   }
 
   async getCurrentUser() {
-    if (USE_MOCK) {
-      return mockAuthService.getCurrentUser();
-    }
-    const response = await apiClient.get("/auth/me/");
+    const response = await apiClient.get("/api/auth/me");
     tokenManager.setUserData(response.data);
     return response.data;
   }
@@ -114,6 +157,43 @@ class AuthService {
 
   getUserData() {
     return tokenManager.getUserData();
+  }
+
+  async sendPasswordResetEmail(
+    email: string,
+    deviceType: string = "web"
+  ): Promise<{ message: string; email_status: string }> {
+    const response = await apiClient.post<{
+      message: string;
+      email_status: string;
+    }>("/auth/reset-mail", {
+      email,
+      device_type: deviceType,
+    });
+    return response.data;
+  }
+
+  async resetPassword(
+    email: string,
+    password1: string,
+    password2: string,
+    token: string
+  ): Promise<{ message: string }> {
+    const response = await apiClient.post<{
+      message: string;
+    }>(`/auth/password-reset?token=${token}`, {
+      email,
+      password1,
+      password2,
+    });
+    return response.data;
+  }
+
+  async verifyInviteToken(token: string): Promise<{ message: string }> {
+    const response = await apiClient.post<{ message: string }>(
+      `/token/verify/${token}`
+    );
+    return response.data;
   }
 }
 

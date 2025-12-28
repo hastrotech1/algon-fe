@@ -52,6 +52,10 @@ interface ApplicationFormDesignProps {
   formData: ApplicationFormData;
   setFormData: (data: ApplicationFormData) => void;
 
+  states: any[];
+  availableLGAs: any[];
+  loadingStates: boolean;
+
   photoPreview: string | null;
   photoFile: File | null;
   photoUploading: boolean;
@@ -83,6 +87,9 @@ interface ApplicationFormDesignProps {
 interface Step1Props {
   formData: ApplicationFormData;
   setFormData: (data: ApplicationFormData) => void;
+  states: any[];
+  availableLGAs: any[];
+  loadingStates: boolean;
   photoPreview: string | null;
   photoFile: File | null;
   photoUploading: boolean;
@@ -126,6 +133,9 @@ export function ApplicationFormDesign({
   progress,
   formData,
   setFormData,
+  states,
+  availableLGAs,
+  loadingStates,
   photoPreview,
   photoFile,
   photoUploading,
@@ -188,6 +198,9 @@ export function ApplicationFormDesign({
             <Step1
               formData={formData}
               setFormData={setFormData}
+              states={states}
+              availableLGAs={availableLGAs}
+              loadingStates={loadingStates}
               photoPreview={photoPreview}
               photoFile={photoFile}
               photoUploading={photoUploading}
@@ -350,6 +363,9 @@ export function ApplicationFormDesign({
 function Step1({
   formData,
   setFormData,
+  states,
+  availableLGAs,
+  loadingStates,
   photoPreview,
   photoFile,
   photoUploading,
@@ -498,14 +514,27 @@ function Step1({
               onValueChange={(value) =>
                 setFormData({ ...formData, state: value, lga: "" })
               }
+              disabled={loadingStates}
             >
               <SelectTrigger id="state" className="rounded-lg">
-                <SelectValue placeholder="Select state" />
+                <SelectValue
+                  placeholder={
+                    loadingStates ? "Loading states..." : "Select state"
+                  }
+                />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="lagos">Lagos</SelectItem>
-                <SelectItem value="kano">Kano</SelectItem>
-                <SelectItem value="rivers">Rivers</SelectItem>
+                {Array.isArray(states) && states.length > 0 ? (
+                  states.map((state) => (
+                    <SelectItem key={state.id} value={state.id}>
+                      {state.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-states" disabled>
+                    {loadingStates ? "Loading..." : "No states available"}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>
@@ -516,7 +545,7 @@ function Step1({
               onValueChange={(value) =>
                 setFormData({ ...formData, lga: value })
               }
-              disabled={!formData.state}
+              disabled={!formData.state || loadingStates}
             >
               <SelectTrigger id="lga" className="rounded-lg">
                 <SelectValue
@@ -526,9 +555,19 @@ function Step1({
                 />
               </SelectTrigger>
               <SelectContent>
-                <SelectItem value="ikeja">Ikeja</SelectItem>
-                <SelectItem value="lagos-island">Lagos Island</SelectItem>
-                <SelectItem value="surulere">Surulere</SelectItem>
+                {Array.isArray(availableLGAs) && availableLGAs.length > 0 ? (
+                  availableLGAs.map((lga) => (
+                    <SelectItem key={lga.id} value={lga.id}>
+                      {lga.name}
+                    </SelectItem>
+                  ))
+                ) : (
+                  <SelectItem value="no-lgas" disabled>
+                    {formData.state
+                      ? "No LGAs available"
+                      : "Select a state first"}
+                  </SelectItem>
+                )}
               </SelectContent>
             </Select>
           </div>

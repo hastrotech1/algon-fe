@@ -43,6 +43,7 @@ interface ApplicantDashboardDesignProps {
   };
   onNavigate: (page: string) => void;
   handleLogout: () => void;
+  onViewDetails: (application: Application) => void;
 }
 
 interface ApplicationStepProps {
@@ -63,6 +64,7 @@ export function ApplicantDashboardDesign({
   stats,
   onNavigate,
   handleLogout,
+  onViewDetails,
 }: ApplicantDashboardDesignProps) {
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/10 to-white">
@@ -125,7 +127,7 @@ export function ApplicantDashboardDesign({
         </div>
 
         {/* Tab Content */}
-        {activeTab === "overview" && currentApplication && (
+        {activeTab === "overview" && (
           <OverviewTab
             stats={stats}
             currentApplication={currentApplication}
@@ -137,6 +139,7 @@ export function ApplicantDashboardDesign({
           <ApplicationsTab
             applications={applications}
             onNavigate={onNavigate}
+            onViewDetails={onViewDetails}
           />
         )}
 
@@ -159,7 +162,7 @@ interface OverviewTabProps {
     approved: number;
     pending: number;
   };
-  currentApplication: Application;
+  currentApplication: Application | null;
   onNavigate: (page: string) => void;
 }
 
@@ -218,49 +221,66 @@ function OverviewTab({
       </div>
 
       {/* Current Application Status */}
-      <Card className="rounded-xl">
-        <CardHeader>
-          <CardTitle>Current Application Status</CardTitle>
-          <CardDescription>Track your application progress</CardDescription>
-        </CardHeader>
-        <CardContent className="space-y-6">
-          <div className="flex justify-between items-center">
-            <div>
-              <p className="text-sm text-muted-foreground">Application ID</p>
-              <p>{currentApplication.id}</p>
+      {currentApplication ? (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>Current Application Status</CardTitle>
+            <CardDescription>Track your application progress</CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-6">
+            <div className="flex justify-between items-center">
+              <div>
+                <p className="text-sm text-muted-foreground">Application ID</p>
+                <p>{currentApplication.id}</p>
+              </div>
+              <StatusBadge status={currentApplication.status} />
             </div>
-            <StatusBadge status={currentApplication.status} />
-          </div>
 
-          <div className="space-y-4">
-            <ApplicationStep
-              title="Application Submitted"
-              description="Your application has been received"
-              status="completed"
-            />
-            <ApplicationStep
-              title="Payment Confirmed"
-              description="Payment of ₦5,500 confirmed"
-              status="completed"
-            />
-            <ApplicationStep
-              title="Under Review"
-              description="Your application is being reviewed by the LG Admin"
-              status="current"
-            />
-            <ApplicationStep
-              title="Approval"
-              description="Pending approval"
-              status="pending"
-            />
-            <ApplicationStep
-              title="Certificate Ready"
-              description="Download your certificate"
-              status="pending"
-            />
-          </div>
-        </CardContent>
-      </Card>
+            <div className="space-y-4">
+              <ApplicationStep
+                title="Application Submitted"
+                description="Your application has been received"
+                status="completed"
+              />
+              <ApplicationStep
+                title="Payment Confirmed"
+                description="Payment of ₦5,500 confirmed"
+                status="completed"
+              />
+              <ApplicationStep
+                title="Under Review"
+                description="Your application is being reviewed by the LG Admin"
+                status="current"
+              />
+              <ApplicationStep
+                title="Approval"
+                description="Pending approval"
+                status="pending"
+              />
+              <ApplicationStep
+                title="Certificate Ready"
+                description="Download your certificate"
+                status="pending"
+              />
+            </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <Card className="rounded-xl">
+          <CardHeader>
+            <CardTitle>No Applications Yet</CardTitle>
+            <CardDescription>
+              You haven't submitted any applications. Get started by applying
+              for a certificate.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <Button onClick={() => onNavigate("application-form")}>
+              Apply for Certificate
+            </Button>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card className="rounded-xl">
@@ -319,9 +339,14 @@ function OverviewTab({
 interface ApplicationsTabProps {
   applications: Application[];
   onNavigate: (page: string) => void;
+  onViewDetails: (application: Application) => void;
 }
 
-function ApplicationsTab({ applications, onNavigate }: ApplicationsTabProps) {
+function ApplicationsTab({
+  applications,
+  onNavigate,
+  onViewDetails,
+}: ApplicationsTabProps) {
   return (
     <Card className="rounded-xl">
       <CardHeader>
@@ -364,7 +389,11 @@ function ApplicationsTab({ applications, onNavigate }: ApplicationsTabProps) {
                       Download
                     </Button>
                   ) : (
-                    <Button size="sm" variant="outline">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onViewDetails(app)}
+                    >
                       View Details
                     </Button>
                   )}

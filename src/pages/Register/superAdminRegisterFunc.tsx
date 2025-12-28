@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { RegisterDesign } from "./registerDesign";
+import { SuperAdminRegisterDesign } from "./superAdminRegisterDesign";
 import { toast } from "sonner";
 import { useAuth } from "../../hooks/useAuth";
 
@@ -12,7 +12,7 @@ interface RegisterFormData {
   confirmPassword: string;
 }
 
-export function Register() {
+export function SuperAdminRegister() {
   const navigate = useNavigate();
   const { register } = useAuth();
   const [formData, setFormData] = useState<RegisterFormData>({
@@ -54,36 +54,58 @@ export function Register() {
     setIsLoading(true);
 
     try {
-      // ✅ Call API service with correct field name
+      // Call the register function from useAuth with correct field name
       await register({
         nin: formData.nin,
         email: formData.email,
         phone_number: formData.phone,
         password: formData.password,
-        role: "applicant",
+        role: "super-admin", // Specify super admin role
       });
 
-      toast.success("Registration successful! Please login to continue.");
+      toast.success("Super Admin account created! Please login to continue.");
 
-      // ✅ Navigate to login page (API doesn't auto-login)
+      // Navigate to login page (API doesn't auto-login)
       setTimeout(() => {
         navigate("/login");
       }, 1500);
     } catch (error: any) {
       console.error("Registration error:", error);
 
-      // ✅ Handle specific validation errors from backend
+      // Handle specific validation errors from backend
       const errors = error.response?.data;
 
       if (errors?.nin) {
-        toast.error(`NIN: ${errors.nin[0]}`);
+        toast.error(
+          `NIN: ${Array.isArray(errors.nin) ? errors.nin[0] : errors.nin}`
+        );
       } else if (errors?.email) {
-        toast.error(`Email: ${errors.email[0]}`);
-      } else if (errors?.phone) {
-        toast.error(`Phone: ${errors.phone[0]}`);
+        toast.error(
+          `Email: ${
+            Array.isArray(errors.email) ? errors.email[0] : errors.email
+          }`
+        );
+      } else if (errors?.phone_number) {
+        toast.error(
+          `Phone: ${
+            Array.isArray(errors.phone_number)
+              ? errors.phone_number[0]
+              : errors.phone_number
+          }`
+        );
+      } else if (errors?.password) {
+        toast.error(
+          `Password: ${
+            Array.isArray(errors.password)
+              ? errors.password[0]
+              : errors.password
+          }`
+        );
       } else {
         toast.error(
-          errors?.message || "Registration failed. Please try again."
+          errors?.message ||
+            error.message ||
+            "Registration failed. Please try again."
         );
       }
     } finally {
@@ -92,7 +114,7 @@ export function Register() {
   };
 
   return (
-    <RegisterDesign
+    <SuperAdminRegisterDesign
       formData={formData}
       setFormData={setFormData}
       handleSubmit={handleSubmit}

@@ -1,7 +1,7 @@
-import apiClient from './api';
-import { mockCertificateService } from './mock.service'; // ✅ Import correct mock
+import apiClient from "./api";
+import { mockCertificateService } from "./mock.service"; // ✅ Import correct mock
 
-const USE_MOCK = true;
+const USE_MOCK = false; // API integration enabled
 
 class CertificateService {
   async downloadCertificate(id: string): Promise<Blob> {
@@ -10,7 +10,7 @@ class CertificateService {
     }
 
     const response = await apiClient.get(`/certificates/${id}/download/`, {
-      responseType: 'blob',
+      responseType: "blob",
     });
     return response.data;
   }
@@ -19,7 +19,9 @@ class CertificateService {
     if (USE_MOCK) {
       return mockCertificateService.verifyCertificate(certificateNumber); // ✅ Use correct mock
     }
-    const response = await apiClient.get(`/certificates/verify/${certificateNumber}/`);
+    const response = await apiClient.get(
+      `/certificates/verify/${certificateNumber}/`
+    );
     return response.data;
   }
 
@@ -27,7 +29,9 @@ class CertificateService {
     if (USE_MOCK) {
       return mockCertificateService.getCertificatePreview(applicationId); // ✅ Use correct mock
     }
-    const response = await apiClient.get(`/certificates/preview/${applicationId}/`);
+    const response = await apiClient.get(
+      `/certificates/preview/${applicationId}/`
+    );
     return response.data;
   }
 }

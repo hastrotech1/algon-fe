@@ -27,6 +27,7 @@ import {
 } from "lucide-react";
 import { StatsCard } from "../../components/StatsCard";
 import { StatusBadge } from "../../components/StatusBadge";
+import { PaginationControls } from "../../components/PaginationControls";
 import {
   Table,
   TableBody,
@@ -78,12 +79,21 @@ import type {
 // ============================================================================
 
 interface LGAdminDashboardDesignProps {
-  activeTab: 'dashboard' | 'applications' | 'digitization' | 'reports' | 'settings';
-  setActiveTab: (tab: 'dashboard' | 'applications' | 'digitization' | 'reports' | 'settings') => void;
+  activeTab:
+    | "dashboard"
+    | "applications"
+    | "digitization"
+    | "reports"
+    | "settings";
+  setActiveTab: (
+    tab: "dashboard" | "applications" | "digitization" | "reports" | "settings"
+  ) => void;
   searchTerm: string;
   setSearchTerm: (term: string) => void;
   statusFilter: string;
   setStatusFilter: (filter: string) => void;
+  dateFilter: string;
+  setDateFilter: (filter: string) => void;
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
   applications: Application[];
@@ -93,8 +103,18 @@ interface LGAdminDashboardDesignProps {
   weeklyData: ChartDataPoint[];
   approvalData: ApprovalData[];
   handleLogout: () => void;
-  handleAddDynamicField: (field: Omit<DynamicField, 'id'>) => void;
+  handleAddDynamicField: (field: Omit<DynamicField, "id">) => void;
   handleDeleteDynamicField: (fieldId: string, fieldLabel: string) => void;
+  handleExportApplications: () => void;
+  handleExportDigitization: () => void;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
   onNavigate: (page: string) => void;
 }
 
@@ -109,6 +129,8 @@ export function LGAdminDashboardDesign({
   setSearchTerm,
   statusFilter,
   setStatusFilter,
+  dateFilter,
+  setDateFilter,
   sidebarOpen,
   setSidebarOpen,
   applications,
@@ -120,6 +142,16 @@ export function LGAdminDashboardDesign({
   handleLogout,
   handleAddDynamicField,
   handleDeleteDynamicField,
+  handleExportApplications,
+  handleExportDigitization,
+  currentPage,
+  pageSize,
+  totalItems,
+  totalPages,
+  hasNext,
+  hasPrevious,
+  onPageChange,
+  onPageSizeChange,
   onNavigate,
 }: LGAdminDashboardDesignProps) {
   return (
@@ -211,9 +243,7 @@ export function LGAdminDashboardDesign({
                   <Menu className="w-5 h-5" />
                 </Button>
                 <div>
-                  <div className="text-foreground">
-                    Ikeja Local Government
-                  </div>
+                  <div className="text-foreground">Ikeja Local Government</div>
                   <div className="text-xs text-muted-foreground">
                     Administrator Portal
                   </div>
@@ -243,11 +273,33 @@ export function LGAdminDashboardDesign({
               setSearchTerm={setSearchTerm}
               statusFilter={statusFilter}
               setStatusFilter={setStatusFilter}
+              dateFilter={dateFilter}
+              setDateFilter={setDateFilter}
+              onExport={handleExportApplications}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              hasNext={hasNext}
+              hasPrevious={hasPrevious}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
             />
           )}
 
           {activeTab === "digitization" && (
-            <DigitizationTab requests={digitizationRequests} />
+            <DigitizationTab
+              requests={digitizationRequests}
+              onExport={handleExportDigitization}
+              currentPage={currentPage}
+              pageSize={pageSize}
+              totalItems={totalItems}
+              totalPages={totalPages}
+              hasNext={hasNext}
+              hasPrevious={hasPrevious}
+              onPageChange={onPageChange}
+              onPageSizeChange={onPageSizeChange}
+            />
           )}
 
           {activeTab === "reports" && <ReportsTab />}
@@ -276,7 +328,11 @@ interface DashboardTabProps {
   approvalData: ApprovalData[];
 }
 
-function DashboardTab({ applications, weeklyData, approvalData }: DashboardTabProps) {
+function DashboardTab({
+  applications,
+  weeklyData,
+  approvalData,
+}: DashboardTabProps) {
   return (
     <div className="space-y-6">
       <div>
@@ -334,11 +390,7 @@ function DashboardTab({ applications, weeklyData, approvalData }: DashboardTabPr
                 <XAxis dataKey="name" stroke="#6b7280" />
                 <YAxis stroke="#6b7280" />
                 <Tooltip />
-                <Bar
-                  dataKey="value"
-                  fill="#00796B"
-                  radius={[8, 8, 0, 0]}
-                />
+                <Bar dataKey="value" fill="#00796B" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </CardContent>
@@ -357,9 +409,7 @@ function DashboardTab({ applications, weeklyData, approvalData }: DashboardTabPr
                   cx="50%"
                   cy="50%"
                   labelLine={false}
-                  label={({ name, value }) =>
-                    `${name}: ${value}`
-                  }
+                  label={({ name, value }) => `${name}: ${value}`}
                   outerRadius={100}
                   fill="#8884d8"
                   dataKey="value"
@@ -422,6 +472,17 @@ interface ApplicationsTabProps {
   setSearchTerm: (term: string) => void;
   statusFilter: string;
   setStatusFilter: (filter: string) => void;
+  dateFilter: string;
+  setDateFilter: (filter: string) => void;
+  onExport: () => void;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
 function ApplicationsTab({
@@ -430,6 +491,17 @@ function ApplicationsTab({
   setSearchTerm,
   statusFilter,
   setStatusFilter,
+  dateFilter,
+  setDateFilter,
+  onExport,
+  currentPage,
+  pageSize,
+  totalItems,
+  totalPages,
+  hasNext,
+  hasPrevious,
+  onPageChange,
+  onPageSizeChange,
 }: ApplicationsTabProps) {
   return (
     <div className="space-y-6">
@@ -440,7 +512,7 @@ function ApplicationsTab({
             Review and process certificate applications
           </p>
         </div>
-        <Button>
+        <Button onClick={onExport}>
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
@@ -461,6 +533,13 @@ function ApplicationsTab({
                 />
               </div>
             </div>
+            <Input
+              type="date"
+              value={dateFilter}
+              onChange={(e) => setDateFilter(e.target.value)}
+              className="w-full sm:w-48"
+              placeholder="Filter by date"
+            />
             <Select value={statusFilter} onValueChange={setStatusFilter}>
               <SelectTrigger className="w-full sm:w-48">
                 <Filter className="w-4 h-4 mr-2" />
@@ -539,6 +618,16 @@ function ApplicationsTab({
               ))}
             </TableBody>
           </Table>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            hasNext={hasNext}
+            hasPrevious={hasPrevious}
+          />
         </CardContent>
       </Card>
     </div>
@@ -548,9 +637,29 @@ function ApplicationsTab({
 // Digitization Tab
 interface DigitizationTabProps {
   requests: DigitizationRequest[];
+  onExport: () => void;
+  currentPage: number;
+  pageSize: number;
+  totalItems: number;
+  totalPages: number;
+  hasNext: boolean;
+  hasPrevious: boolean;
+  onPageChange: (page: number) => void;
+  onPageSizeChange: (size: number) => void;
 }
 
-function DigitizationTab({ requests }: DigitizationTabProps) {
+function DigitizationTab({
+  requests,
+  onExport,
+  currentPage,
+  pageSize,
+  totalItems,
+  totalPages,
+  hasNext,
+  hasPrevious,
+  onPageChange,
+  onPageSizeChange,
+}: DigitizationTabProps) {
   return (
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between gap-4">
@@ -560,7 +669,7 @@ function DigitizationTab({ requests }: DigitizationTabProps) {
             Review and approve certificate digitization requests
           </p>
         </div>
-        <Button>
+        <Button onClick={onExport}>
           <Download className="w-4 h-4 mr-2" />
           Export CSV
         </Button>
@@ -698,6 +807,16 @@ function DigitizationTab({ requests }: DigitizationTabProps) {
               ))}
             </TableBody>
           </Table>
+          <PaginationControls
+            currentPage={currentPage}
+            totalPages={totalPages}
+            pageSize={pageSize}
+            totalItems={totalItems}
+            onPageChange={onPageChange}
+            onPageSizeChange={onPageSizeChange}
+            hasNext={hasNext}
+            hasPrevious={hasPrevious}
+          />
         </CardContent>
       </Card>
     </div>
@@ -740,7 +859,7 @@ function ReportsTab() {
 // Settings Tab
 interface SettingsTabProps {
   dynamicFields: DynamicField[];
-  handleAddDynamicField: (field: Omit<DynamicField, 'id'>) => void;
+  handleAddDynamicField: (field: Omit<DynamicField, "id">) => void;
   handleDeleteDynamicField: (fieldId: string, fieldLabel: string) => void;
 }
 
@@ -858,7 +977,10 @@ function SettingsTab({
                           size="sm"
                           variant="ghost"
                           onClick={() =>
-                            handleDeleteDynamicField(field.id, field.field_label)
+                            handleDeleteDynamicField(
+                              field.id,
+                              field.field_label
+                            )
                           }
                           className="h-8 w-8 p-0 text-red-600 hover:text-red-700 hover:bg-red-50"
                         >
@@ -918,9 +1040,9 @@ function SettingsTab({
               <Label htmlFor="fieldType">Input Type *</Label>
               <Select
                 value={newField.field_type}
-                onValueChange={(value: "text" | "number" | "date" | "file" | "dropdown") =>
-                  setNewField({ ...newField, field_type: value })
-                }
+                onValueChange={(
+                  value: "text" | "number" | "date" | "file" | "dropdown"
+                ) => setNewField({ ...newField, field_type: value })}
               >
                 <SelectTrigger className="rounded-lg">
                   <SelectValue />
@@ -979,11 +1101,7 @@ function SettingsTab({
         <CardContent className="space-y-4">
           <div className="space-y-2">
             <Label>Processing Time (Days)</Label>
-            <Input
-              type="number"
-              defaultValue="7"
-              className="rounded-lg w-24"
-            />
+            <Input type="number" defaultValue="7" className="rounded-lg w-24" />
           </div>
 
           <div className="space-y-2">

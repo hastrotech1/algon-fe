@@ -1,6 +1,9 @@
 import { Landing } from "./pages/LandingPage/landingPageFunc";
 import { Login } from "./pages/Login/loginFunc";
 import { Register } from "./pages/Register/registerFunc";
+import { SuperAdminRegister } from "./pages/Register/superAdminRegisterFunc";
+import { ForgotPassword } from "./pages/ForgotPassword/forgotPasswordFunc";
+import { ResetPassword } from "./pages/ResetPassword/resetPasswordFunc";
 import { ApplicationForm } from "./pages/Application/applicationFormFunc";
 import { ApplicantDashboard } from "./pages/Applicant/applicantDashboardFunc";
 import { CertificateDownload } from "./pages/Certificate/certificateDownloadFunc";
@@ -23,13 +26,19 @@ export default function App() {
           <Route path="/" element={<Landing />} />
           <Route path="/login" element={<Login />} />
           <Route path="/register" element={<Register />} />
+          <Route
+            path="/super-admin-register"
+            element={<SuperAdminRegister />}
+          />
+          <Route path="/forgot-password" element={<ForgotPassword />} />
+          <Route path="/reset-password" element={<ResetPassword />} />
           <Route path="/verify" element={<CertificateVerification />} />
 
           {/* Applicant Routes */}
           <Route
             path="/application-form"
             element={
-              <ProtectedRoute allowedRoles={['applicant']}>
+              <ProtectedRoute allowedRoles={["applicant"]}>
                 <ApplicationForm />
               </ProtectedRoute>
             }
@@ -37,7 +46,7 @@ export default function App() {
           <Route
             path="/applicant-dashboard"
             element={
-              <ProtectedRoute allowedRoles={['applicant']}>
+              <ProtectedRoute allowedRoles={["applicant"]}>
                 <ApplicantDashboard />
               </ProtectedRoute>
             }
@@ -45,7 +54,7 @@ export default function App() {
           <Route
             path="/digitization-flow"
             element={
-              <ProtectedRoute allowedRoles={['applicant']}>
+              <ProtectedRoute allowedRoles={["applicant"]}>
                 <DigitizationFlow />
               </ProtectedRoute>
             }
@@ -53,7 +62,7 @@ export default function App() {
           <Route
             path="/certificate-download"
             element={
-              <ProtectedRoute allowedRoles={['applicant']}>
+              <ProtectedRoute allowedRoles={["applicant"]}>
                 <CertificateDownload />
               </ProtectedRoute>
             }
@@ -63,7 +72,7 @@ export default function App() {
           <Route
             path="/lg-admin-dashboard"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <LGAdminDashboard />
               </ProtectedRoute>
             }
@@ -71,7 +80,7 @@ export default function App() {
           <Route
             path="/admin-onboarding"
             element={
-              <ProtectedRoute allowedRoles={['admin']}>
+              <ProtectedRoute allowedRoles={["admin"]}>
                 <AdminOnboarding />
               </ProtectedRoute>
             }
@@ -81,7 +90,7 @@ export default function App() {
           <Route
             path="/super-admin-dashboard"
             element={
-              <ProtectedRoute allowedRoles={['superAdmin']}>
+              <ProtectedRoute allowedRoles={["superAdmin"]}>
                 <SuperAdminDashboard />
               </ProtectedRoute>
             }

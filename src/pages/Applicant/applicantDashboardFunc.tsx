@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { ApplicantDashboardDesign } from "./applicantDashboardDesign";
+import { ApplicationDetailsModal } from "../../components/ApplicationDetailsModal";
 import { toast } from "sonner";
 import type { Application } from "../../Types/types";
 import { applicationService } from "../../services"; // ✅ Import service
@@ -17,6 +18,9 @@ export function ApplicantDashboard() {
   const [applications, setApplications] = useState<Application[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [selectedApplication, setSelectedApplication] =
+    useState<Application | null>(null);
+  const [isDetailsModalOpen, setIsDetailsModalOpen] = useState(false);
 
   // ✅ Fetch data on component mount
   useEffect(() => {
@@ -28,9 +32,35 @@ export function ApplicantDashboard() {
     setError(null);
 
     try {
-      // ✅ Call API service
-      const data = await applicationService.getMyApplications();
-      setApplications(data);
+      // Call API service with pagination
+      const response = await applicationService.getMyApplications({
+        application_type: "certificate",
+        limit: 50,
+        offset: 0,
+      });
+
+      // Handle the new paginated response structure
+      const applications = response.data.results || response.data || [];
+
+      // Transform API response to match Application type
+      const transformedApplications: Application[] = applications.map(
+        (app: any) => ({
+          id: app.id,
+          name: app.full_name,
+          nin: app.nin,
+          status: app.application_status as any,
+          payment: app.payment_status,
+          dateProcessed: app.approved_at || app.updated_at,
+          dateApplied: app.created_at,
+          village: app.village,
+          lga: app.local_government.name,
+          state: app.state.name,
+          email: app.email,
+          phone: app.phone_number,
+        })
+      );
+
+      setApplications(transformedApplications);
     } catch (error: any) {
       console.error("Failed to load applications:", error);
       const errorMessage =
@@ -100,23 +130,36 @@ export function ApplicantDashboard() {
     );
   }
 
+  const handleViewDetails = (application: Application) => {
+    setSelectedApplication(application);
+    setIsDetailsModalOpen(true);
+  };
+
   return (
-    <ApplicantDashboardDesign
-      activeTab={activeTab}
-      setActiveTab={setActiveTab}
-      applications={applications}
-      currentApplication={currentApplication}
-      stats={stats}
-      onNavigate={(page: string) => {
-        const routes: Record<string, string> = {
-          "application-form": "/application-form",
-          "digitization-flow": "/digitization-flow",
-          verify: "/verify",
-          "certificate-download": "/certificate-download",
-        };
-        navigate(routes[page] || "/");
-      }}
-      handleLogout={handleLogout}
-    />
+    <>
+      <ApplicantDashboardDesign
+        activeTab={activeTab}
+        setActiveTab={setActiveTab}
+        applications={applications}
+        currentApplication={currentApplication}
+        stats={stats}
+        onNavigate={(page: string) => {
+          const routes: Record<string, string> = {
+            "application-form": "/application-form",
+            "digitization-flow": "/digitization-flow",
+            verify: "/verify",
+            "certificate-download": "/certificate-download",
+          };
+          navigate(routes[page] || "/");
+        }}
+        handleLogout={handleLogout}
+        onViewDetails={handleViewDetails}
+      />
+      <ApplicationDetailsModal
+        application={selectedApplication}
+        isOpen={isDetailsModalOpen}
+        onClose={() => setIsDetailsModalOpen(false)}
+      />
+    </>
   );
 }

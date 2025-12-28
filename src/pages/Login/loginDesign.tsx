@@ -89,9 +89,7 @@ export function LoginDesign({
                 <button
                   type="button"
                   className="text-primary hover:underline"
-                  onClick={() =>
-                    toast.info("Password reset not implemented yet")
-                  }
+                  onClick={() => navigate("/forgot-password")}
                 >
                   Forgot password?
                 </button>

@@ -5,13 +5,13 @@
 // Organized by domain for better maintainability
 // ============================================================================
 
-import { ComponentType } from 'react';
+import { ComponentType } from "react";
 
 // ============================================================================
 // USER & AUTHENTICATION
 // ============================================================================
 
-export type UserRole = 'applicant' | 'admin' | 'superAdmin';
+export type UserRole = "applicant" | "admin" | "superAdmin";
 
 export interface User {
   id: string;
@@ -42,12 +42,12 @@ export interface RegisterFormData {
 // APPLICATION & CERTIFICATE
 // ============================================================================
 
-export type ApplicationStatus = 
-  | 'pending' 
-  | 'approved' 
-  | 'rejected' 
-  | 'under-review' 
-  | 'digitization';
+export type ApplicationStatus =
+  | "pending"
+  | "approved"
+  | "rejected"
+  | "under-review"
+  | "digitization";
 
 export interface Application {
   id: string;
@@ -199,7 +199,7 @@ export interface LocalGovernment {
   name: string;
   state: string;
   admin: string;
-  status: 'active' | 'inactive';
+  status: "active" | "inactive";
   certificates: number;
   revenue: string;
   adminEmail?: string;
@@ -209,14 +209,14 @@ export interface LocalGovernment {
 export interface DynamicField {
   id: string;
   field_label: string;
-  field_type: 'text' | 'number' | 'date' | 'file' | 'dropdown';
+  field_type: "text" | "number" | "date" | "file" | "dropdown";
   is_required: boolean;
   dropdown_options?: string[];
 }
 
 export interface DynamicFieldFormData {
   field_label: string;
-  field_type: 'text' | 'number' | 'date' | 'file' | 'dropdown';
+  field_type: "text" | "number" | "date" | "file" | "dropdown";
   is_required: boolean;
   dropdown_options: string[];
 }
@@ -257,6 +257,79 @@ export interface AuditLogEntry {
   user: string;
   timestamp: string;
   details?: string;
+}
+
+// ============================================================================
+// SUPER ADMIN - AUDIT LOGS & DASHBOARD
+// ============================================================================
+
+export interface AuditLog {
+  id: string;
+  action_type: string;
+  table_name: string;
+  record_id: string | null;
+  changes: object | string | null;
+  description: string;
+  ip_address: string | null;
+  user_agent: string | null;
+  created_at: string;
+  user: string;
+}
+
+export interface AuditLogsResponse {
+  message: string;
+  data: {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: AuditLog[];
+  };
+}
+
+export interface InviteLGAdminRequest {
+  state: string;
+  lga: string;
+  full_name: string;
+  email: string;
+}
+
+export interface InviteLGAdminResponse {
+  message: string;
+  email_status: string;
+  data: Array<{
+    user_id: string;
+    first_name: string;
+    last_name: string;
+    email: string;
+    role: string;
+    email_verified: boolean;
+  }>;
+}
+
+export interface MetricCard {
+  value: number;
+  trend?: "up" | "down";
+  percent_change?: number;
+}
+
+export interface MonthlyMetric {
+  month: string;
+  total: number;
+}
+
+export interface SuperAdminDashboardResponse {
+  message: string;
+  data: {
+    metric_cards: {
+      certificates_issued: MetricCard;
+      active_lgs: { value: number };
+      total_revenue: MetricCard;
+      total_applications: MetricCard;
+    };
+    monthly_applications: MonthlyMetric[];
+    monthly_revenue: any[];
+    active_lgas: number;
+  };
 }
 
 // ============================================================================
@@ -328,9 +401,9 @@ export interface ApiError {
 // THEME & UI STATE
 // ============================================================================
 
-export type Theme = 'light' | 'dark';
+export type Theme = "light" | "dark";
 
-export type ToastType = 'success' | 'error' | 'warning' | 'info';
+export type ToastType = "success" | "error" | "warning" | "info";
 
 export interface ToastMessage {
   type: ToastType;
@@ -373,8 +446,291 @@ export interface Payment {
   id: number;
   reference: string;
   amount: number;
-  status: 'pending' | 'success' | 'failed';
+  status: "pending" | "success" | "failed";
   date: string;
   channel?: string;
   metadata?: Record<string, any>;
+}
+
+// ============================================================================
+// API RESPONSE TYPES FOR CERTIFICATE & DIGITIZATION
+// ============================================================================
+
+export interface FeeStructure {
+  application_fee: number | null;
+  digitization_fee: number | null;
+  regeneration_fee: number | null;
+  currency: string;
+  local_government: string | null;
+  last_updated_by: string | null;
+}
+
+export interface StateInfo {
+  id: string;
+  name: string;
+}
+
+export interface LocalGovernmentInfo {
+  id: string;
+  name: string;
+}
+
+export interface CertificateApplicationData {
+  full_name: string;
+  date_of_birth: string;
+  phone_number: string;
+  email: string;
+  state: string;
+  local_government: string;
+  village: string;
+  nin: string;
+}
+
+export interface CertificateApplicationResponse {
+  message: string;
+  data: {
+    user_data: CertificateApplicationData;
+    extra_fields: any[];
+    application_id: string;
+  };
+}
+
+export interface ApplicationStep2Response {
+  message: string;
+  data: {
+    fee: FeeStructure;
+    verification_fee: number | null;
+    application_id: string;
+  };
+}
+
+export interface DigitizationApplicationData {
+  id: string;
+  email: string;
+  phone_number: string;
+  state: string;
+  local_government: string;
+  certificate_reference_number: string;
+  nin: string;
+  full_name: string;
+  payment_status: string;
+  verification_status: string;
+  reviewed_at: string | null;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  reviewed_by: string | null;
+}
+
+export interface DigitizationApplicationResponse {
+  message: string;
+  data: {
+    user_data: DigitizationApplicationData;
+    fee: FeeStructure;
+  };
+}
+
+export interface ApplicationListItem {
+  id: string;
+  nin: string;
+  full_name: string;
+  date_of_birth: string;
+  phone_number: string;
+  email: string;
+  village: string;
+  residential_address: string | null;
+  landmark: string | null;
+  letter_from_traditional_ruler: string | null;
+  profile_photo: string | null;
+  nin_slip: string | null;
+  application_status: string;
+  payment_status: string;
+  remarks: string | null;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  applicant: string;
+  state: StateInfo;
+  local_government: LocalGovernmentInfo;
+  approved_by: string | null;
+}
+
+export interface MyApplicationsResponse {
+  message: string;
+  data: {
+    count: number;
+    next: string | null;
+    previous: string | null;
+    results: ApplicationListItem[];
+  };
+}
+
+export interface NINVerificationResponse {
+  message: string;
+}
+
+export interface PaystackPaymentData {
+  authorization_url: string;
+  access_code: string;
+  reference: string;
+}
+
+export interface PaymentInitiationResponse {
+  message: string;
+  data: {
+    status: boolean;
+    message: string;
+    data: PaystackPaymentData;
+  };
+}
+
+// ============================================================================
+// ADMIN - LGA FEE MANAGEMENT
+// ============================================================================
+
+export interface LGAFeeData {
+  id: string;
+  application_fee: string;
+  digitization_fee: string;
+  regeneration_fee: string;
+  currency: string;
+  updated_at: string;
+  local_government: string;
+  last_updated_by: string | null;
+  state: string;
+}
+
+export interface LGAFeeResponse {
+  message: string;
+  data: LGAFeeData[];
+}
+
+export interface CreateLGAFeeResponse {
+  message: string;
+  data: LGAFeeData;
+}
+
+export interface UpdateLGAFeeResponse {
+  message: string;
+  data: LGAFeeData[];
+}
+
+// ============================================================================
+// ADMIN - DYNAMIC FIELDS
+// ============================================================================
+
+export interface DynamicResponseFieldData {
+  id: string;
+  field_label: string;
+  field_name: string;
+  field_type: string;
+  is_required: boolean;
+  created_at: string;
+  updated_at: string;
+  local_government: string;
+  created_by: string;
+}
+
+export interface CreateDynamicFieldResponse {
+  message: string;
+  data: DynamicResponseFieldData;
+}
+
+// ============================================================================
+// ADMIN - APPLICATION DETAILS
+// ============================================================================
+
+export interface SingleApplicationDetail {
+  id: string;
+  nin: string;
+  full_name: string;
+  phone_number: string;
+  email: string;
+  uploaded_certificate: string | null;
+  certificate_reference_number: string | null;
+  profile_photo: string | null;
+  nin_slip: string | null;
+  payment_status: string;
+  verification_status: string;
+  reviewed_at: string | null;
+  remarks: string | null;
+  created_at: string;
+  updated_at: string;
+  applicant: string;
+  state: StateInfo;
+  local_government: LocalGovernmentInfo;
+  reviewed_by: string | null;
+}
+
+// ============================================================================
+// ADMIN - LG DASHBOARD
+// ============================================================================
+
+export interface LGDashboardMetricCard {
+  value: number;
+  trend: "up" | "down";
+  change_percent: number;
+}
+
+export interface LGDashboardApplication {
+  id: string;
+  nin: string;
+  full_name: string;
+  date_of_birth: string;
+  phone_number: string;
+  email: string;
+  village: string;
+  residential_address: string;
+  landmark: string | null;
+  letter_from_traditional_ruler: string | null;
+  profile_photo: string;
+  nin_slip: string;
+  application_status: string;
+  payment_status: string;
+  remarks: string;
+  approved_at: string | null;
+  created_at: string;
+  updated_at: string;
+  applicant: string;
+  state: StateInfo;
+  local_government: LocalGovernmentInfo;
+  approved_by: string | null;
+}
+
+export interface LGAdminDashboardResponse {
+  message: string;
+  data: {
+    metric_cards: {
+      pending_applications: LGDashboardMetricCard;
+      approved_certificates: LGDashboardMetricCard;
+      rejected: LGDashboardMetricCard;
+      total_revenue: LGDashboardMetricCard;
+    };
+    weekly_applications: number;
+    approval_statistics: number;
+    recent_applications: LGDashboardApplication[];
+  };
+}
+
+// ============================================================================
+// STATES AND LOCAL GOVERNMENTS
+// ============================================================================
+
+export interface LocalGovernmentBasic {
+  id: string;
+  name: string;
+}
+
+export interface StateWithLGs {
+  id: string;
+  name: string;
+  code: string | null;
+  created_at: string;
+  updated_at: string;
+  local_governtments: LocalGovernmentBasic[]; // Note: API has typo "governtments"
+}
+
+export interface AllStatesResponse {
+  message: string;
+  data: StateWithLGs[];
 }

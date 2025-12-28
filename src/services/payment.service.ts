@@ -1,7 +1,7 @@
-import apiClient from './api';
-import { mockPaymentService } from './mock.service';
+import apiClient from "./api";
+import { mockPaymentService } from "./mock.service";
 
-const USE_MOCK = true; // ✅ Toggle this
+const USE_MOCK = false; // API integration enabled
 
 export interface PaymentInitializeRequest {
   email: string;
@@ -11,7 +11,7 @@ export interface PaymentInitializeRequest {
     nin?: string;
     lga?: string;
     state?: string;
-    serviceType?: 'application' | 'digitization';
+    serviceType?: "application" | "digitization";
     [key: string]: any;
   };
 }
@@ -34,12 +34,14 @@ class PaymentService {
   /**
    * Initialize payment - Backend handles Paystack
    */
-  async initializePayment(data: PaymentInitializeRequest): Promise<PaymentInitializeResponse> {
+  async initializePayment(
+    data: PaymentInitializeRequest
+  ): Promise<PaymentInitializeResponse> {
     if (USE_MOCK) {
       return mockPaymentService.initializePayment(data);
     }
-    
-    const response = await apiClient.post('/payments/initialize/', data);
+
+    const response = await apiClient.post("/payments/initialize/", data);
     return response.data;
   }
 
@@ -50,8 +52,8 @@ class PaymentService {
     if (USE_MOCK) {
       return mockPaymentService.verifyPayment({ reference });
     }
-    
-    const response = await apiClient.post('/payments/verify/', { reference });
+
+    const response = await apiClient.post("/payments/verify/", { reference });
     return response.data;
   }
 
@@ -62,8 +64,8 @@ class PaymentService {
     if (USE_MOCK) {
       return mockPaymentService.getPaymentHistory();
     }
-    
-    const response = await apiClient.get('/payments/history/');
+
+    const response = await apiClient.get("/payments/history/");
     return response.data;
   }
 }
