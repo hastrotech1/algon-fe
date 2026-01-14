@@ -224,18 +224,42 @@ export function DigitizationFlow() {
         return;
       }
 
-      toast.success("Application submitted! Initiating payment...");
+      toast.success("Application submitted! Verifying NIN...");
 
-      // Verify NIN information (non-blocking)
+      // Verify NIN information BEFORE payment (blocking operation)
       try {
         const ninResult = await applicationService.verifyNIN(
           applicationId,
           "digitization"
         );
-        if (ninResult.message.toLowerCase().includes("success")) {
+        if (!ninResult.message.toLowerCase().includes("success")) {
+          toast.warning(ninResult.message || "NIN verification pending");
+        } else {
+          toast.success("NIN verified successfully!");
         }
       } catch (ninError: any) {
-        console.warn("NIN verification warning:", ninError);
+        console.error("NIN verification error:", ninError);
+        const status = ninError.response?.status;
+        const errorMessage = ninError.response?.data?.message;
+
+        // Handle specific error codes
+        if (status === 400) {
+          toast.error(errorMessage || "Invalid verification request");
+          setIsInitializingPayment(false);
+          return;
+        } else if (status === 401 || status === 403) {
+          toast.error("Authentication failed. Please log in again.");
+          setIsInitializingPayment(false);
+          return;
+        } else if (status === 404) {
+          toast.error("Application not found for NIN verification");
+          setIsInitializingPayment(false);
+          return;
+        } else {
+          toast.error(errorMessage || "NIN verification failed");
+          setIsInitializingPayment(false);
+          return;
+        }
       }
 
       // Extract digitization fee from response (backend returns fee based on local government)

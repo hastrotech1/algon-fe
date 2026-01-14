@@ -1,5 +1,5 @@
 // ============================================================================
-// CENTRALIZED TYPE DEFINITIONS FOR LGCIVS
+// CENTRALIZED TYPE DEFINITIONS FOR ALGON
 // ============================================================================
 // This file contains all TypeScript types and interfaces used across the application
 // Organized by domain for better maintainability

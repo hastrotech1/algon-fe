@@ -132,7 +132,7 @@ export function SuperAdminDashboardDesign({
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="text-foreground">LGCIVS</div>
+              <div className="text-foreground">ALGON</div>
               <div className="text-xs text-muted-foreground">Super Admin</div>
             </div>
           </div>
@@ -187,7 +187,7 @@ export function SuperAdminDashboardDesign({
                   <Menu className="w-5 h-5" />
                 </Button>
                 <div>
-                  <div className="text-foreground">LGCIVS National Portal</div>
+                  <div className="text-foreground">ALGON National Portal</div>
                   <div className="text-xs text-muted-foreground">
                     Federal Republic of Nigeria
                   </div>

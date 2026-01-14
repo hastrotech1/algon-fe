@@ -18,7 +18,7 @@ import {
   User,
 } from "lucide-react";
 
-type VerificationResult = 'valid' | 'invalid' | null;
+type VerificationResult = "valid" | "invalid" | null;
 
 interface CertificateData {
   holderName: string;
@@ -31,7 +31,6 @@ interface CertificateData {
   expiryDate?: string;
 }
 
-
 interface CertificateVerificationDesignProps {
   certificateId: string;
   setCertificateId: (id: string) => void;
@@ -41,7 +40,6 @@ interface CertificateVerificationDesignProps {
   handleVerify: (e: React.FormEvent) => void;
   onNavigate: (page: string) => void;
 }
-
 
 export function CertificateVerificationDesign({
   certificateId,
@@ -65,13 +63,15 @@ export function CertificateVerificationDesign({
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <div className="text-foreground">LGCIVS</div>
+                <div className="text-foreground">ALGON</div>
                 <div className="text-xs text-muted-foreground">
                   Certificate Verification
                 </div>
               </div>
             </div>
-            <Button variant="outline" onClick={() => navigate('/')}> {/* ✅ Direct navigation */}
+            <Button variant="outline" onClick={() => navigate("/")}>
+              {" "}
+              {/* ✅ Direct navigation */}
               Back to Home
             </Button>
           </div>
@@ -157,7 +157,9 @@ export function CertificateVerificationDesign({
                       <p className="text-xs text-muted-foreground">
                         Local Government
                       </p>
-                      <p className="text-sm">{certificateData.lga}, {certificateData.state}</p>
+                      <p className="text-sm">
+                        {certificateData.lga}, {certificateData.state}
+                      </p>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
@@ -166,7 +168,11 @@ export function CertificateVerificationDesign({
                       <p className="text-xs text-muted-foreground">
                         Issue Date
                       </p>
-                      <p className="text-sm">{new Date(certificateData.issueDate).toLocaleDateString()}</p>
+                      <p className="text-sm">
+                        {new Date(
+                          certificateData.issueDate
+                        ).toLocaleDateString()}
+                      </p>
                     </div>
                   </div>
                 </div>
@@ -175,7 +181,9 @@ export function CertificateVerificationDesign({
                   <div className="flex items-center justify-between">
                     <div>
                       <p className="text-xs text-muted-foreground">Status</p>
-                      <p className="text-sm text-green-600">{certificateData.status}</p>
+                      <p className="text-sm text-green-600">
+                        {certificateData.status}
+                      </p>
                     </div>
                     <div className="w-20 h-20 border-2 border-border rounded-lg flex items-center justify-center">
                       <div className="text-xs text-center text-muted-foreground">
@@ -187,7 +195,8 @@ export function CertificateVerificationDesign({
               </div>
 
               <div className="mt-6 text-center text-sm text-green-700">
-                This certificate was verified on {new Date().toLocaleDateString()}
+                This certificate was verified on{" "}
+                {new Date().toLocaleDateString()}
               </div>
             </CardContent>
           </Card>
