@@ -186,7 +186,7 @@ export function LGAdminDashboardDesign({
               <Shield className="w-6 h-6 text-white" />
             </div>
             <div>
-              <div className="text-foreground">LGCIVS</div>
+              <div className="text-foreground">ALGON</div>
               <div className="text-xs text-muted-foreground">LG Admin</div>
             </div>
           </div>

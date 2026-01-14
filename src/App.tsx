@@ -8,7 +8,7 @@ import { ApplicationForm } from "./pages/Application/applicationFormFunc";
 import { ApplicantDashboard } from "./pages/Applicant/applicantDashboardFunc";
 import { CertificateDownload } from "./pages/Certificate/certificateDownloadFunc";
 import { CertificateVerification } from "./pages/Certificate/certificateVerificationFunc";
-import { LGAdminDashboard } from "./pages/LGADashboard/lgAdminDashboardFunc";
+import { LGAdminDashboardWithPermissionCheck } from "./pages/LGADashboard/lgAdminDashboardWithPermissionCheck";
 import { SuperAdminDashboard } from "./pages/SuperAdmin/superAdminDashboardFunc";
 import { DigitizationFlow } from "./pages/Digitalization/digitizationFunc";
 import { AdminOnboarding } from "./pages/Admin/adminOnboardFunc";
@@ -75,7 +75,9 @@ export default function App() {
             path="/lg-admin-dashboard"
             element={
               <ProtectedRoute allowedRoles={["admin"]}>
-                <LGAdminDashboard />
+                <LGAdminDashboardWithPermissionCheck
+                  requiredPermissions={["approveApplications", "viewAnalytics"]}
+                />
               </ProtectedRoute>
             }
           />

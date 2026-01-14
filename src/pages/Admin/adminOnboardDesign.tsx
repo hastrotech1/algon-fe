@@ -25,6 +25,8 @@ import {
   CheckCircle,
   ArrowLeft,
   ArrowRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import {
   Logo,
@@ -152,6 +154,9 @@ export function AdminOnboardingDesign({
 
 // Step 1: Personal Info
 function PersonalInfoStep({ formData, setFormData }: OnboardingStepProps) {
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
+
   return (
     <>
       <CardHeader>
@@ -208,7 +213,7 @@ function PersonalInfoStep({ formData, setFormData }: OnboardingStepProps) {
             <Label htmlFor="password">Create Password *</Label>
             <Input
               id="password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               placeholder="Minimum 8 characters"
               value={formData.password}
               onChange={(e) =>
@@ -216,12 +221,23 @@ function PersonalInfoStep({ formData, setFormData }: OnboardingStepProps) {
               }
               className="rounded-lg"
             />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showPassword}
+                onChange={(e) => setShowPassword(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm text-muted-foreground">
+                Show password
+              </span>
+            </label>
           </div>
           <div className="space-y-2">
             <Label htmlFor="confirmPassword">Confirm Password *</Label>
             <Input
               id="confirmPassword"
-              type="password"
+              type={showConfirmPassword ? "text" : "password"}
               placeholder="Re-enter password"
               value={formData.confirmPassword}
               onChange={(e) =>
@@ -229,6 +245,17 @@ function PersonalInfoStep({ formData, setFormData }: OnboardingStepProps) {
               }
               className="rounded-lg"
             />
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={showConfirmPassword}
+                onChange={(e) => setShowConfirmPassword(e.target.checked)}
+                className="rounded"
+              />
+              <span className="text-sm text-muted-foreground">
+                Show password
+              </span>
+            </label>
           </div>
         </div>
 

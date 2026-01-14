@@ -79,7 +79,7 @@ export function ApplicantDashboardDesign({
                 <Shield className="w-6 h-6 text-white" />
               </div>
               <div>
-                <div className="text-foreground">LGCIVS - Applicant Portal</div>
+                <div className="text-foreground">ALGON - Applicant Portal</div>
                 <div className="text-xs text-muted-foreground">
                   Welcome back, {userName}
                 </div>

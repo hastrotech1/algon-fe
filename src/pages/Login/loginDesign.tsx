@@ -3,6 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+
+import { useState } from "react";
 import {
   Card,
   CardContent,
@@ -31,6 +33,7 @@ export function LoginDesign({
   isLoading,
 }: LoginDesignProps) {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = React.useState(false);
 
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,13 +76,25 @@ export function LoginDesign({
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Enter your password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="rounded-lg"
                   disabled={isLoading}
+                  required
                 />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) => setShowPassword(e.target.checked)}
+                    className="rounded"
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Show password
+                  </span>
+                </label>
               </div>
 
               <div className="flex items-center justify-between text-sm">

@@ -10,7 +10,7 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Logo } from "../../DesignSystem/designSyetem";
-import { CheckCircle, Eye, EyeOff, Lock } from "lucide-react";
+import { CheckCircle, Lock } from "lucide-react";
 import { useState } from "react";
 
 interface ResetPasswordDesignProps {
@@ -131,29 +131,28 @@ export function ResetPasswordDesign({
 
                 <div className="space-y-2">
                   <Label htmlFor="password1">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password1"
-                      type={showPassword1 ? "text" : "password"}
-                      placeholder="Enter new password"
-                      value={password1}
-                      onChange={(e) => setPassword1(e.target.value)}
-                      required
+                  <Input
+                    id="password1"
+                    type={showPassword1 ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={password1}
+                    onChange={(e) => setPassword1(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="rounded-lg"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPassword1}
+                      onChange={(e) => setShowPassword1(e.target.checked)}
+                      className="rounded"
                       disabled={isLoading}
-                      className="rounded-lg pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword1(!showPassword1)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword1 ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                    <span className="text-sm text-muted-foreground">
+                      Show password
+                    </span>
+                  </label>
 
                   {/* Password strength indicator */}
                   {password1 && (
@@ -187,29 +186,28 @@ export function ResetPasswordDesign({
 
                 <div className="space-y-2">
                   <Label htmlFor="password2">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="password2"
-                      type={showPassword2 ? "text" : "password"}
-                      placeholder="Confirm new password"
-                      value={password2}
-                      onChange={(e) => setPassword2(e.target.value)}
-                      required
+                  <Input
+                    id="password2"
+                    type={showPassword2 ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={password2}
+                    onChange={(e) => setPassword2(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="rounded-lg"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showPassword2}
+                      onChange={(e) => setShowPassword2(e.target.checked)}
+                      className="rounded"
                       disabled={isLoading}
-                      className="rounded-lg pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowPassword2(!showPassword2)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showPassword2 ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                    <span className="text-sm text-muted-foreground">
+                      Show password
+                    </span>
+                  </label>
 
                   {/* Password match indicator */}
                   {password2 && (

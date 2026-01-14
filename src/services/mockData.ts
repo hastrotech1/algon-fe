@@ -245,12 +245,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-1",
       name: "Adeola Johnson",
-      email: "adeola.johnson@ikeja.gov.ng"
+      email: "adeola.johnson@ikeja.gov.ng",
     },
     certificates: { certificates: 145, digitization: 23 },
     revenue: 797500,
     created_at: "2024-01-15T00:00:00Z",
-    updated_at: "2024-01-15T00:00:00Z"
+    updated_at: "2024-01-15T00:00:00Z",
   },
   {
     id: "2",
@@ -259,12 +259,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-2",
       name: "Chioma Nwankwo",
-      email: "chioma.nwankwo@lagosisland.gov.ng"
+      email: "chioma.nwankwo@lagosisland.gov.ng",
     },
     certificates: { certificates: 198, digitization: 31 },
     revenue: 1089000,
     created_at: "2024-01-20T00:00:00Z",
-    updated_at: "2024-01-20T00:00:00Z"
+    updated_at: "2024-01-20T00:00:00Z",
   },
   {
     id: "3",
@@ -273,12 +273,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-3",
       name: "Ibrahim Musa",
-      email: "ibrahim.musa@surulere.gov.ng"
+      email: "ibrahim.musa@surulere.gov.ng",
     },
     certificates: { certificates: 132, digitization: 18 },
     revenue: 726000,
     created_at: "2024-02-10T00:00:00Z",
-    updated_at: "2024-02-10T00:00:00Z"
+    updated_at: "2024-02-10T00:00:00Z",
   },
   {
     id: "4",
@@ -287,12 +287,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-4",
       name: "Fatima Hassan",
-      email: "fatima.hassan@kanomunicipal.gov.ng"
+      email: "fatima.hassan@kanomunicipal.gov.ng",
     },
     certificates: { certificates: 256, digitization: 42 },
     revenue: 1408000,
     created_at: "2024-02-15T00:00:00Z",
-    updated_at: "2024-02-15T00:00:00Z"
+    updated_at: "2024-02-15T00:00:00Z",
   },
   {
     id: "5",
@@ -301,12 +301,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-5",
       name: "Emmanuel Okon",
-      email: "emmanuel.okon@portharcourt.gov.ng"
+      email: "emmanuel.okon@portharcourt.gov.ng",
     },
     certificates: { certificates: 189, digitization: 27 },
     revenue: 1039500,
     created_at: "2024-03-01T00:00:00Z",
-    updated_at: "2024-03-01T00:00:00Z"
+    updated_at: "2024-03-01T00:00:00Z",
   },
   {
     id: "6",
@@ -315,12 +315,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-6",
       name: "Aisha Bello",
-      email: "aisha.bello@kadunanorth.gov.ng"
+      email: "aisha.bello@kadunanorth.gov.ng",
     },
     certificates: { certificates: 0, digitization: 0 },
     revenue: 0,
     created_at: "2024-03-20T00:00:00Z",
-    updated_at: "2024-03-20T00:00:00Z"
+    updated_at: "2024-03-20T00:00:00Z",
   },
   {
     id: "7",
@@ -329,12 +329,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-7",
       name: "Tunde Adeyemi",
-      email: "tunde.adeyemi@etiosa.gov.ng"
+      email: "tunde.adeyemi@etiosa.gov.ng",
     },
     certificates: { certificates: 178, digitization: 25 },
     revenue: 979000,
     created_at: "2024-04-05T00:00:00Z",
-    updated_at: "2024-04-05T00:00:00Z"
+    updated_at: "2024-04-05T00:00:00Z",
   },
   {
     id: "8",
@@ -343,12 +343,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-8",
       name: "Grace Okafor",
-      email: "grace.okafor@alimosho.gov.ng"
+      email: "grace.okafor@alimosho.gov.ng",
     },
     certificates: { certificates: 312, digitization: 48 },
     revenue: 1716000,
     created_at: "2024-04-12T00:00:00Z",
-    updated_at: "2024-04-12T00:00:00Z"
+    updated_at: "2024-04-12T00:00:00Z",
   },
   {
     id: "9",
@@ -357,12 +357,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-9",
       name: "Mohammed Yusuf",
-      email: "mohammed.yusuf@gwagwalada.gov.ng"
+      email: "mohammed.yusuf@gwagwalada.gov.ng",
     },
     certificates: { certificates: 95, digitization: 14 },
     revenue: 522500,
     created_at: "2024-05-01T00:00:00Z",
-    updated_at: "2024-05-01T00:00:00Z"
+    updated_at: "2024-05-01T00:00:00Z",
   },
   {
     id: "10",
@@ -371,12 +371,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-10",
       name: "Patricia Eze",
-      email: "patricia.eze@abujamunicipal.gov.ng"
+      email: "patricia.eze@abujamunicipal.gov.ng",
     },
     certificates: { certificates: 267, digitization: 39 },
     revenue: 1468500,
     created_at: "2024-05-10T00:00:00Z",
-    updated_at: "2024-05-10T00:00:00Z"
+    updated_at: "2024-05-10T00:00:00Z",
   },
   {
     id: "11",
@@ -385,12 +385,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-11",
       name: "Oluwaseun Ajayi",
-      email: "oluwaseun.ajayi@ibadannorth.gov.ng"
+      email: "oluwaseun.ajayi@ibadannorth.gov.ng",
     },
     certificates: { certificates: 156, digitization: 22 },
     revenue: 858000,
     created_at: "2024-06-01T00:00:00Z",
-    updated_at: "2024-06-01T00:00:00Z"
+    updated_at: "2024-06-01T00:00:00Z",
   },
   {
     id: "12",
@@ -399,12 +399,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-12",
       name: "Chinedu Okonkwo",
-      email: "chinedu.okonkwo@enugunorth.gov.ng"
+      email: "chinedu.okonkwo@enugunorth.gov.ng",
     },
     certificates: { certificates: 124, digitization: 17 },
     revenue: 682000,
     created_at: "2024-06-15T00:00:00Z",
-    updated_at: "2024-06-15T00:00:00Z"
+    updated_at: "2024-06-15T00:00:00Z",
   },
   {
     id: "13",
@@ -413,12 +413,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-13",
       name: "Ngozi Obi",
-      email: "ngozi.obi@abanorth.gov.ng"
+      email: "ngozi.obi@abanorth.gov.ng",
     },
     certificates: { certificates: 143, digitization: 20 },
     revenue: 786500,
     created_at: "2024-07-01T00:00:00Z",
-    updated_at: "2024-07-01T00:00:00Z"
+    updated_at: "2024-07-01T00:00:00Z",
   },
   {
     id: "14",
@@ -427,12 +427,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-14",
       name: "Osaze Omoregie",
-      email: "osaze.omoregie@benincity.gov.ng"
+      email: "osaze.omoregie@benincity.gov.ng",
     },
     certificates: { certificates: 201, digitization: 29 },
     revenue: 1105500,
     created_at: "2024-07-20T00:00:00Z",
-    updated_at: "2024-07-20T00:00:00Z"
+    updated_at: "2024-07-20T00:00:00Z",
   },
   {
     id: "15",
@@ -441,12 +441,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-15",
       name: "Daniel Pwajok",
-      email: "daniel.pwajok@josnorth.gov.ng"
+      email: "daniel.pwajok@josnorth.gov.ng",
     },
     certificates: { certificates: 87, digitization: 12 },
     revenue: 478500,
     created_at: "2024-08-01T00:00:00Z",
-    updated_at: "2024-08-01T00:00:00Z"
+    updated_at: "2024-08-01T00:00:00Z",
   },
   {
     id: "16",
@@ -455,12 +455,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-16",
       name: "Zainab Ali",
-      email: "zainab.ali@maiduguri.gov.ng"
+      email: "zainab.ali@maiduguri.gov.ng",
     },
     certificates: { certificates: 0, digitization: 0 },
     revenue: 0,
     created_at: "2024-08-15T00:00:00Z",
-    updated_at: "2024-08-15T00:00:00Z"
+    updated_at: "2024-08-15T00:00:00Z",
   },
   {
     id: "17",
@@ -469,12 +469,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-17",
       name: "Ekaette Bassey",
-      email: "ekaette.bassey@calabar.gov.ng"
+      email: "ekaette.bassey@calabar.gov.ng",
     },
     certificates: { certificates: 112, digitization: 16 },
     revenue: 616000,
     created_at: "2024-09-01T00:00:00Z",
-    updated_at: "2024-09-01T00:00:00Z"
+    updated_at: "2024-09-01T00:00:00Z",
   },
   {
     id: "18",
@@ -483,12 +483,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-18",
       name: "Abdullahi Rahman",
-      email: "abdullahi.rahman@ilorinwest.gov.ng"
+      email: "abdullahi.rahman@ilorinwest.gov.ng",
     },
     certificates: { certificates: 134, digitization: 19 },
     revenue: 737000,
     created_at: "2024-09-15T00:00:00Z",
-    updated_at: "2024-09-15T00:00:00Z"
+    updated_at: "2024-09-15T00:00:00Z",
   },
   {
     id: "19",
@@ -497,12 +497,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-19",
       name: "Hauwa Usman",
-      email: "hauwa.usman@sokotonorth.gov.ng"
+      email: "hauwa.usman@sokotonorth.gov.ng",
     },
     certificates: { certificates: 98, digitization: 13 },
     revenue: 539000,
     created_at: "2024-10-01T00:00:00Z",
-    updated_at: "2024-10-01T00:00:00Z"
+    updated_at: "2024-10-01T00:00:00Z",
   },
   {
     id: "20",
@@ -511,12 +511,12 @@ export const mockLocalGovernments: LocalGovernment[] = [
     assigned_admin: {
       id: "admin-20",
       name: "Yakubu Ibrahim",
-      email: "yakubu.ibrahim@bauchi.gov.ng"
+      email: "yakubu.ibrahim@bauchi.gov.ng",
     },
     certificates: { certificates: 0, digitization: 0 },
     revenue: 0,
     created_at: "2024-10-15T00:00:00Z",
-    updated_at: "2024-10-15T00:00:00Z"
+    updated_at: "2024-10-15T00:00:00Z",
   },
 ];
 
@@ -591,7 +591,7 @@ export const mockUsers = {
   },
   superAdmin: {
     id: "super-001",
-    email: "superadmin@lgcivs.gov.ng",
+    email: "superadmin@algon.gov.ng",
     role: "super-admin" as const,
     name: "System Administrator",
     phone: "08011112222",

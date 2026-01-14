@@ -11,7 +11,7 @@ import {
   CardTitle,
 } from "../../components/ui/card";
 import { Logo } from "../../DesignSystem/designSyetem";
-import { CheckCircle, Eye, EyeOff, Lock, ArrowLeft } from "lucide-react";
+import { CheckCircle, Lock, ArrowLeft } from "lucide-react";
 
 interface ChangePasswordDesignProps {
   currentPassword: string;
@@ -122,58 +122,54 @@ export function ChangePasswordDesign({
               <form onSubmit={handleFormSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="currentPassword">Current Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="currentPassword"
-                      type={showCurrentPassword ? "text" : "password"}
-                      placeholder="Enter current password"
-                      value={currentPassword}
-                      onChange={(e) => setCurrentPassword(e.target.value)}
-                      required
+                  <Input
+                    id="currentPassword"
+                    type={showCurrentPassword ? "text" : "password"}
+                    placeholder="Enter current password"
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="rounded-lg"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showCurrentPassword}
+                      onChange={(e) => setShowCurrentPassword(e.target.checked)}
+                      className="rounded"
                       disabled={isLoading}
-                      className="rounded-lg pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowCurrentPassword(!showCurrentPassword)
-                      }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showCurrentPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                    <span className="text-sm text-muted-foreground">
+                      Show password
+                    </span>
+                  </label>
                 </div>
 
                 <div className="space-y-2">
                   <Label htmlFor="newPassword">New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="newPassword"
-                      type={showNewPassword ? "text" : "password"}
-                      placeholder="Enter new password"
-                      value={newPassword}
-                      onChange={(e) => setNewPassword(e.target.value)}
-                      required
+                  <Input
+                    id="newPassword"
+                    type={showNewPassword ? "text" : "password"}
+                    placeholder="Enter new password"
+                    value={newPassword}
+                    onChange={(e) => setNewPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="rounded-lg"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showNewPassword}
+                      onChange={(e) => setShowNewPassword(e.target.checked)}
+                      className="rounded"
                       disabled={isLoading}
-                      className="rounded-lg pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() => setShowNewPassword(!showNewPassword)}
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showNewPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                    <span className="text-sm text-muted-foreground">
+                      Show password
+                    </span>
+                  </label>
 
                   {/* Password strength indicator */}
                   {newPassword && (
@@ -212,31 +208,28 @@ export function ChangePasswordDesign({
 
                 <div className="space-y-2">
                   <Label htmlFor="confirmPassword">Confirm New Password</Label>
-                  <div className="relative">
-                    <Input
-                      id="confirmPassword"
-                      type={showConfirmPassword ? "text" : "password"}
-                      placeholder="Confirm new password"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
+                  <Input
+                    id="confirmPassword"
+                    type={showConfirmPassword ? "text" : "password"}
+                    placeholder="Confirm new password"
+                    value={confirmPassword}
+                    onChange={(e) => setConfirmPassword(e.target.value)}
+                    required
+                    disabled={isLoading}
+                    className="rounded-lg"
+                  />
+                  <label className="flex items-center gap-2 cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={showConfirmPassword}
+                      onChange={(e) => setShowConfirmPassword(e.target.checked)}
+                      className="rounded"
                       disabled={isLoading}
-                      className="rounded-lg pr-10"
                     />
-                    <button
-                      type="button"
-                      onClick={() =>
-                        setShowConfirmPassword(!showConfirmPassword)
-                      }
-                      className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                    >
-                      {showConfirmPassword ? (
-                        <EyeOff className="w-4 h-4" />
-                      ) : (
-                        <Eye className="w-4 h-4" />
-                      )}
-                    </button>
-                  </div>
+                    <span className="text-sm text-muted-foreground">
+                      Show password
+                    </span>
+                  </label>
 
                   {/* Password match indicator */}
                   {confirmPassword && (

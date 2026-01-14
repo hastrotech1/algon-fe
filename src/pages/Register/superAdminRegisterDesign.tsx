@@ -3,6 +3,7 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "../../components/ui/button";
 import { Input } from "../../components/ui/input";
 import { Label } from "../../components/ui/label";
+
 import {
   Card,
   CardContent,
@@ -36,6 +37,8 @@ export function SuperAdminRegisterDesign({
   isLoading,
 }: SuperAdminRegisterDesignProps) {
   const navigate = useNavigate();
+  const [showPassword, setShowPassword] = React.useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = React.useState(false);
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/20 to-white flex items-center justify-center p-4">
@@ -153,7 +156,7 @@ export function SuperAdminRegisterDesign({
                 <Label htmlFor="password">Password</Label>
                 <Input
                   id="password"
-                  type="password"
+                  type={showPassword ? "text" : "password"}
                   placeholder="Create a strong password"
                   value={formData.password}
                   onChange={(e) =>
@@ -163,6 +166,18 @@ export function SuperAdminRegisterDesign({
                   disabled={isLoading}
                   required
                 />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showPassword}
+                    onChange={(e) => setShowPassword(e.target.checked)}
+                    className="rounded"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Show password
+                  </span>
+                </label>
                 <p className="text-xs text-muted-foreground">
                   Must include uppercase, lowercase, numbers, and special
                   characters (@$!%*?&#)
@@ -173,7 +188,7 @@ export function SuperAdminRegisterDesign({
                 <Label htmlFor="confirmPassword">Confirm Password</Label>
                 <Input
                   id="confirmPassword"
-                  type="password"
+                  type={showConfirmPassword ? "text" : "password"}
                   placeholder="Re-enter your password"
                   value={formData.confirmPassword}
                   onChange={(e) =>
@@ -185,6 +200,18 @@ export function SuperAdminRegisterDesign({
                   className="rounded-lg"
                   disabled={isLoading}
                 />
+                <label className="flex items-center gap-2 cursor-pointer">
+                  <input
+                    type="checkbox"
+                    checked={showConfirmPassword}
+                    onChange={(e) => setShowConfirmPassword(e.target.checked)}
+                    className="rounded"
+                    disabled={isLoading}
+                  />
+                  <span className="text-sm text-muted-foreground">
+                    Show password
+                  </span>
+                </label>
               </div>
 
               <div className="flex items-start gap-2">

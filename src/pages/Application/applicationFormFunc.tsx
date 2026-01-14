@@ -160,7 +160,7 @@ export function ApplicationForm() {
       const fee = step2Response.data.fee.application_fee || 0;
       setCertificateAmount(fee);
 
-      // Verify NIN information (non-blocking)
+      // Step 3: Verify NIN information BEFORE payment (blocking operation)
       try {
         const ninResult = await applicationService.verifyNIN(
           appId,
@@ -172,23 +172,31 @@ export function ApplicationForm() {
           toast.warning(ninResult.message || "NIN verification pending");
         }
       } catch (ninError: any) {
-        console.warn("NIN verification warning:", ninError);
+        console.warn("NIN verification error:", ninError);
         const status = ninError.response?.status;
         const errorMessage = ninError.response?.data?.message;
 
         // Handle specific error codes per API spec
         if (status === 400) {
-          toast.warning(errorMessage || "Invalid verification request");
+          toast.error(errorMessage || "Invalid verification request");
+          setIsInitializingPayment(false);
+          return;
         } else if (status === 401 || status === 403) {
           toast.error("Authentication failed. Please log in again.");
+          setIsInitializingPayment(false);
+          return;
         } else if (status === 404) {
-          toast.warning("Application not found for NIN verification");
+          toast.error("Application not found for NIN verification");
+          setIsInitializingPayment(false);
+          return;
         } else {
-          toast.warning(errorMessage || "NIN verification pending");
+          toast.error(errorMessage || "NIN verification failed");
+          setIsInitializingPayment(false);
+          return;
         }
       }
 
-      // Step 3: Initialize payment (backend determines amount from application's local government)
+      // Step 4: Initialize payment (after successful NIN verification)
       const result = await applicationService.initiatePayment({
         payment_type: "certificate",
         application_id: appId,

@@ -1,8 +1,15 @@
-import React from 'react';
-import { useNavigate } from 'react-router-dom';
-import { Button } from '../../components/ui/button';
-import { Navigation } from '../../components/Navigation';
-import { Shield, CheckCircle, Search, Lock, Clock, FileCheck } from 'lucide-react';
+import React from "react";
+import { useNavigate } from "react-router-dom";
+import { Button } from "../../components/ui/button";
+import { Navigation } from "../../components/Navigation";
+import {
+  Shield,
+  CheckCircle,
+  Search,
+  Lock,
+  Clock,
+  FileCheck,
+} from "lucide-react";
 
 export function LandingDesign() {
   const navigate = useNavigate(); // ✅ Use hook directly
@@ -10,7 +17,7 @@ export function LandingDesign() {
   return (
     <div className="min-h-screen bg-gradient-to-b from-white to-secondary/10">
       <Navigation />
-      
+
       {/* Hero Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16 md:py-24">
         <div className="text-center space-y-8">
@@ -18,28 +25,29 @@ export function LandingDesign() {
             <Shield className="w-4 h-4" />
             <span className="text-sm">Official Government Platform</span>
           </div>
-          
+
           <h1 className="text-4xl md:text-6xl max-w-4xl mx-auto">
             Local Government Certificate Issuance & Verification System
           </h1>
-          
+
           <p className="text-xl text-muted-foreground max-w-2xl mx-auto">
-            Apply for and verify Local Government Indigene Certificates across all 774 Local Governments in Nigeria
+            Apply for and verify Local Government Indigene Certificates across
+            all 774 Local Governments in Nigeria
           </p>
-          
+
           <div className="flex flex-col sm:flex-row gap-4 justify-center items-center">
-            <Button 
-              size="lg" 
+            <Button
+              size="lg"
               className="px-8 py-6 rounded-xl"
-              onClick={() => navigate('/register')} // ✅ Direct navigation
+              onClick={() => navigate("/register")} // ✅ Direct navigation
             >
               Apply for Certificate
             </Button>
-            <Button 
-              size="lg" 
-              variant="outline" 
+            <Button
+              size="lg"
+              variant="outline"
               className="px-8 py-6 rounded-xl"
-              onClick={() => navigate('/verify')} // ✅ Direct navigation
+              onClick={() => navigate("/verify")} // ✅ Direct navigation
             >
               <Search className="w-5 h-5 mr-2" />
               Verify Certificate
@@ -51,17 +59,17 @@ export function LandingDesign() {
       {/* Features Section */}
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <div className="grid md:grid-cols-3 gap-8">
-          <FeatureCard 
+          <FeatureCard
             icon={Clock}
             title="Fast Processing"
             description="Get your certificate processed within 7-14 working days"
           />
-          <FeatureCard 
+          <FeatureCard
             icon={Lock}
             title="Secure & Verified"
             description="All certificates are digitally signed and verifiable"
           />
-          <FeatureCard 
+          <FeatureCard
             icon={FileCheck}
             title="Nationwide Coverage"
             description="Available across all 774 Local Governments in Nigeria"
@@ -73,22 +81,22 @@ export function LandingDesign() {
       <section className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-16">
         <h2 className="text-center mb-12">How It Works</h2>
         <div className="grid md:grid-cols-4 gap-6">
-          <StepCard 
+          <StepCard
             step="1"
             title="Register"
             description="Create an account with your NIN"
           />
-          <StepCard 
+          <StepCard
             step="2"
             title="Apply"
             description="Fill the application form and upload documents"
           />
-          <StepCard 
+          <StepCard
             step="3"
             title="Payment"
             description="Pay the processing fee securely"
           />
-          <StepCard 
+          <StepCard
             step="4"
             title="Download"
             description="Receive and download your certificate"
@@ -106,38 +114,53 @@ export function LandingDesign() {
                   <Shield className="w-6 h-6 text-white" />
                 </div>
                 <div>
-                  <div className="text-foreground font-semibold">LGCIVS</div>
+                  <div className="text-foreground font-semibold">ALGON</div>
                 </div>
               </div>
               <p className="text-sm text-muted-foreground">
-                Official certificate issuance platform for all Nigerian Local Governments
+                Official certificate issuance platform for all Nigerian Local
+                Governments
               </p>
             </div>
             <div>
               <h4 className="mb-4 font-semibold">Quick Links</h4>
               <div className="space-y-2 text-sm">
-                <div className="text-muted-foreground hover:text-primary cursor-pointer">About Us</div>
-                <div className="text-muted-foreground hover:text-primary cursor-pointer">FAQs</div>
-                <div className="text-muted-foreground hover:text-primary cursor-pointer">Contact</div>
+                <div className="text-muted-foreground hover:text-primary cursor-pointer">
+                  About Us
+                </div>
+                <div className="text-muted-foreground hover:text-primary cursor-pointer">
+                  FAQs
+                </div>
+                <div className="text-muted-foreground hover:text-primary cursor-pointer">
+                  Contact
+                </div>
               </div>
             </div>
             <div>
               <h4 className="mb-4 font-semibold">Legal</h4>
               <div className="space-y-2 text-sm">
-                <div className="text-muted-foreground hover:text-primary cursor-pointer">Privacy Policy</div>
-                <div className="text-muted-foreground hover:text-primary cursor-pointer">Terms of Service</div>
+                <div className="text-muted-foreground hover:text-primary cursor-pointer">
+                  Privacy Policy
+                </div>
+                <div className="text-muted-foreground hover:text-primary cursor-pointer">
+                  Terms of Service
+                </div>
               </div>
             </div>
             <div>
               <h4 className="mb-4 font-semibold">Support</h4>
               <div className="space-y-2 text-sm">
-                <div className="text-muted-foreground">Email: support@lgcivs.gov.ng</div>
-                <div className="text-muted-foreground">Phone: +234 800 000 0000</div>
+                <div className="text-muted-foreground">
+                  Email: support@algon.gov.ng
+                </div>
+                <div className="text-muted-foreground">
+                  Phone: +234 800 000 0000
+                </div>
               </div>
             </div>
           </div>
           <div className="border-t border-border mt-8 pt-8 text-center text-sm text-muted-foreground">
-            © 2025 LGCIVS. All rights reserved. Federal Republic of Nigeria
+            © 2025 ALGON. All rights reserved. Federal Republic of Nigeria
           </div>
         </div>
       </footer>
