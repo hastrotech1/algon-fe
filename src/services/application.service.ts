@@ -18,7 +18,7 @@ interface CertificateApplicationResponse {
       village: string;
       nin: string;
     };
-    extra_fields: any[];
+    extra_fields: Array<Record<string, unknown>>;
     application_id: string;
   };
 }
@@ -27,11 +27,14 @@ interface ApplicationStep2Response {
   message: string;
   data: {
     fee: {
-      application_fee: number | null;
-      digitization_fee: number | null;
-      regeneration_fee: number | null;
+      application_fee: number | string | null;
+      digitization_fee: number | string | null;
+      regeneration_fee: number | string | null;
       currency: string;
       local_government: string | null;
+      id?: string;
+      state?: string;
+      updated_at?: string;
       last_updated_by: string | null;
     };
     verification_fee: number | null;
@@ -102,6 +105,19 @@ interface MyApplicationsResponse {
     };
     approved_by: string | null;
   }>;
+  count?: number;
+  next?: string | null;
+  previous?: string | null;
+}
+
+interface PaginatedMyApplicationsApiResponse {
+  message?: string;
+  data?: {
+    count?: number;
+    next?: string | null;
+    previous?: string | null;
+    results?: MyApplicationsResponse["data"];
+  };
 }
 
 interface NINVerificationResponse {
@@ -109,21 +125,118 @@ interface NINVerificationResponse {
 }
 
 interface PaymentInitiationResponse {
-  status?: boolean;
+  status: boolean;
   message: string;
   data: {
-    status: boolean;
-    message: string;
-    data: {
-      authorization_url: string;
-      access_code: string;
-      reference: string;
-    };
+    authorization_url: string;
+    access_code: string;
+    reference: string;
     public_key?: string; // Optional: Paystack public key for inline checkout
   };
 }
 
+interface NestedPaymentInitiationApiResponse {
+  message?: string;
+  data?: {
+    status?: boolean;
+    message?: string;
+    data?: {
+      authorization_url?: string;
+      access_code?: string;
+      reference?: string;
+      public_key?: string;
+    };
+  };
+}
+
 class ApplicationService {
+  private normalizeMyApplicationsResponse(
+    payload: unknown,
+  ): MyApplicationsResponse {
+    const raw = payload as
+      | MyApplicationsResponse
+      | PaginatedMyApplicationsApiResponse;
+
+    if (Array.isArray((raw as MyApplicationsResponse).data)) {
+      return {
+        message:
+          (raw as MyApplicationsResponse).message ||
+          "Applications retrieved successfully",
+        data: (raw as MyApplicationsResponse).data,
+        count: (raw as MyApplicationsResponse).count,
+        next: (raw as MyApplicationsResponse).next,
+        previous: (raw as MyApplicationsResponse).previous,
+      };
+    }
+
+    const paginated = raw?.data;
+    if (paginated && Array.isArray(paginated.results)) {
+      return {
+        message: raw?.message || "Applications retrieved successfully",
+        data: paginated.results,
+        count: paginated.count ?? paginated.results.length,
+        next: paginated.next ?? null,
+        previous: paginated.previous ?? null,
+      };
+    }
+
+    return {
+      message: raw?.message || "Applications retrieved successfully",
+      data: [],
+      count: 0,
+      next: null,
+      previous: null,
+    };
+  }
+
+  private normalizePaymentInitiationResponse(
+    payload: unknown,
+  ): PaymentInitiationResponse {
+    const raw = payload as
+      | PaymentInitiationResponse
+      | NestedPaymentInitiationApiResponse;
+
+    const nestedStatus = raw?.data?.status;
+    const nestedMessage = raw?.data?.message;
+    const nestedData = raw?.data?.data;
+
+    const flatStatus = (raw as PaymentInitiationResponse)?.status;
+    const flatMessage = (raw as PaymentInitiationResponse)?.message;
+    const flatData = (raw as PaymentInitiationResponse)?.data;
+
+    const status =
+      typeof nestedStatus === "boolean"
+        ? nestedStatus
+        : typeof flatStatus === "boolean"
+          ? flatStatus
+          : false;
+
+    const message =
+      nestedMessage || flatMessage || "Failed to initialize payment";
+
+    const paymentData =
+      nestedData && typeof nestedData === "object" ? nestedData : flatData;
+
+    const authorization_url = paymentData?.authorization_url;
+    const access_code = paymentData?.access_code;
+    const reference = paymentData?.reference;
+
+    if (!authorization_url || !access_code || !reference) {
+      throw new Error("Invalid payment initialization response format");
+    }
+
+    return {
+      status,
+      message,
+      data: {
+        authorization_url,
+        access_code,
+        reference,
+        public_key: paymentData.public_key,
+      },
+    };
+  }
+
   // Submit certificate application (Step 1)
   async submitCertificateApplication(data: {
     date_of_birth: string;
@@ -186,7 +299,7 @@ class ApplicationService {
         field_value: string;
         field_id: string;
       }>;
-      [key: string]: any; // For dynamic file fields
+      [key: string]: unknown; // For dynamic file fields
     },
   ): Promise<ApplicationStep2Response> {
     if (USE_MOCK) {
@@ -216,7 +329,7 @@ class ApplicationService {
       formData.append("extra_fields", JSON.stringify(data.extra_fields));
     }
 
-    // Add any file fields
+    // Add file fields from payload
     Object.keys(data).forEach((key) => {
       if (
         key !== "residential_address" &&
@@ -351,8 +464,8 @@ class ApplicationService {
       ? `/certificates/my-applications?${queryString}`
       : "/certificates/my-applications";
 
-    const response = await apiClient.get<MyApplicationsResponse>(url);
-    return response.data;
+    const response = await apiClient.get(url);
+    return this.normalizeMyApplicationsResponse(response.data);
   }
 
   // Verify NIN information
@@ -384,19 +497,15 @@ class ApplicationService {
         status: true,
         message: "Payment initiated successfully",
         data: {
-          status: true,
-          message: "Authorization URL created",
-          data: {
-            authorization_url:
-              "https://mock-payment-gateway.com/pay/" + data.application_id,
-            access_code: "mock_access_" + Date.now(),
-            reference: "mock_ref_" + Date.now(),
-          },
+          authorization_url:
+            "https://mock-payment-gateway.com/pay/" + data.application_id,
+          access_code: "mock_access_" + Date.now(),
+          reference: "mock_ref_" + Date.now(),
         },
       };
     }
 
-    const response = await apiClient.post<PaymentInitiationResponse>(
+    const response = await apiClient.post(
       "/certificate/initiate-payment",
       data,
       {
@@ -405,7 +514,7 @@ class ApplicationService {
         },
       },
     );
-    return response.data;
+    return this.normalizePaymentInitiationResponse(response.data);
   }
 
   // Legacy methods for backward compatibility

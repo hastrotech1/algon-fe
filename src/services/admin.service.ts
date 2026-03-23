@@ -1,15 +1,94 @@
 import apiClient from "./api";
 import type {
   DynamicField,
+  LGAFeeData,
   OnboardingFormData,
   CreateDynamicFieldResponse,
   UpdateDynamicFieldResponse,
 } from "../Types/types";
 import { mockAdminService } from "./mock.service";
+import { getBackendErrorMessage } from "../utils/errorHelpers";
 
 const USE_MOCK = false;
 
+interface AdminServiceErrorData {
+  message?: string;
+  error?: string | { local_government?: string[] };
+  detail?: string;
+}
+
+interface AdminServiceError {
+  response?: {
+    status?: number;
+    data?: AdminServiceErrorData;
+  };
+  message?: string;
+}
+
 class AdminService {
+  private toServiceError(error: unknown): AdminServiceError {
+    if (typeof error === "object" && error !== null) {
+      return error as AdminServiceError;
+    }
+    return {};
+  }
+
+  private normalizeLgaFeeItem(fee: Partial<LGAFeeData>) {
+    return {
+      ...fee,
+      application_fee: Number.parseFloat(fee?.application_fee ?? "0"),
+      digitization_fee: Number.parseFloat(fee?.digitization_fee ?? "0"),
+      regeneration_fee: Number.parseFloat(fee?.regeneration_fee ?? "0"),
+    };
+  }
+
+  private normalizeDynamicField(field: {
+    id?: unknown;
+    field_label?: unknown;
+    field_name?: unknown;
+    field_type?: unknown;
+    is_required?: unknown;
+    dropdown_options?: unknown;
+    local_government?: unknown;
+  }): DynamicField {
+    const localGovernment = field.local_government as
+      | string
+      | { id?: string; name?: string }
+      | undefined;
+    const parsedFieldType = String(field.field_type || "text");
+    const allowedFieldTypes: DynamicField["field_type"][] = [
+      "text",
+      "number",
+      "date",
+      "file",
+      "dropdown",
+    ];
+    const normalizedFieldType: DynamicField["field_type"] =
+      allowedFieldTypes.includes(parsedFieldType as DynamicField["field_type"])
+        ? (parsedFieldType as DynamicField["field_type"])
+        : "text";
+
+    return {
+      id: String(field.id || ""),
+      field_label: String(field.field_label || ""),
+      field_name: String(field.field_name || ""),
+      field_type: normalizedFieldType,
+      is_required: Boolean(field.is_required),
+      dropdown_options: Array.isArray(field.dropdown_options)
+        ? (field.dropdown_options as string[])
+        : undefined,
+      local_government:
+        typeof localGovernment === "string"
+          ? localGovernment
+          : localGovernment?.id
+            ? {
+                id: localGovernment.id,
+                name: localGovernment.name || "",
+              }
+            : undefined,
+    };
+  }
+
   // Admin Onboarding
   async completeOnboarding(data: OnboardingFormData) {
     if (USE_MOCK) {
@@ -26,9 +105,14 @@ class AdminService {
     }
 
     try {
-      const response = await apiClient.get("/api/admin/response-fields");
-      return response.data.data || response.data || [];
-    } catch (error: any) {
+      const response = await apiClient.get("/admin/response-fields");
+      const fields = response.data?.data || [];
+      return Array.isArray(fields)
+        ? fields.map((field: unknown) =>
+            this.normalizeDynamicField(field as Record<string, unknown>),
+          )
+        : [];
+    } catch (error: unknown) {
       console.error("Failed to fetch dynamic fields:", error);
       // Return empty array if endpoint fails
       return [];
@@ -39,7 +123,7 @@ class AdminService {
     field_label: string;
     field_name?: string;
     is_required: boolean;
-    field_type: string;
+    field_type: "text" | "number" | "date" | "file" | "dropdown";
   }) {
     if (USE_MOCK) {
       return mockAdminService.createDynamicField({
@@ -47,7 +131,6 @@ class AdminService {
         field_name:
           fieldData.field_name ||
           fieldData.field_label.toLowerCase().replace(/\s+/g, "_"),
-        local_government: "mock-lg-id",
       });
     }
 
@@ -56,7 +139,7 @@ class AdminService {
       const authService = (await import("./auth.service")).default;
       const userInfo = await authService.getCurrentUser();
 
-      const lgId = userInfo.local_government || userInfo.lg_id;
+      const lgId = userInfo.local_government;
 
       if (!lgId) {
         throw new Error(
@@ -88,20 +171,23 @@ class AdminService {
       );
 
       console.log("Create dynamic field response:", response.data);
-      return response.data.data;
-    } catch (error: any) {
+      return this.normalizeDynamicField(response.data?.data);
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       // Log full error for debugging
       console.error("Create dynamic field error:", {
-        status: error.response?.status,
-        data: error.response?.data,
-        message: error.message,
+        status: serviceError.response?.status,
+        data: serviceError.response?.data,
+        message: serviceError.message,
         fullError: error,
       });
 
-      const status = error.response?.status;
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message ||
-        error.response?.data?.error ||
+        serviceError.response?.data?.message ||
+        (typeof serviceError.response?.data?.error === "string"
+          ? serviceError.response?.data?.error
+          : undefined) ||
         "Failed to create dynamic response field";
 
       if (status === 400) {
@@ -122,7 +208,7 @@ class AdminService {
         throw new Error(
           message || "Validation error. Please check the field data.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -148,7 +234,7 @@ class AdminService {
       const authService = (await import("./auth.service")).default;
       const userInfo = await authService.getCurrentUser();
 
-      const lgId = userInfo.local_government || userInfo.lg_id;
+      const lgId = userInfo.local_government;
 
       if (!lgId) {
         throw new Error(
@@ -157,7 +243,7 @@ class AdminService {
       }
 
       const response = await apiClient.patch<UpdateDynamicFieldResponse>(
-        `/api/admin/response-fields/${fieldId}`,
+        `/admin/response-fields/${fieldId}`,
         fieldData,
         {
           headers: {
@@ -165,11 +251,13 @@ class AdminService {
           },
         },
       );
-      return response.data.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+      return this.normalizeDynamicField(response.data?.data);
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to update dynamic field";
+        serviceError.response?.data?.message ||
+        "Failed to update dynamic field";
 
       if (status === 400) {
         throw new Error(
@@ -187,7 +275,7 @@ class AdminService {
         throw new Error(
           message || "Validation error. Please check the field data.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -205,7 +293,7 @@ class AdminService {
       const authService = (await import("./auth.service")).default;
       const userInfo = await authService.getCurrentUser();
 
-      const lgId = userInfo.local_government || userInfo.lg_id;
+      const lgId = userInfo.local_government;
 
       if (!lgId) {
         throw new Error(
@@ -214,21 +302,22 @@ class AdminService {
       }
 
       const response = await apiClient.delete(
-        `/api/admin/response-fields/${fieldId}`,
+        `/admin/response-fields/${fieldId}`,
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to delete response field";
 
-      if (error.response?.status === 400) {
+      if (serviceError.response?.status === 400) {
         message = "Invalid or malformed response field ID";
-      } else if (error.response?.status === 401) {
+      } else if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You are not allowed to delete this response field";
-      } else if (error.response?.status === 404) {
+      } else if (serviceError.response?.status === 404) {
         message = "Response field not found";
-      } else if (error.response?.status >= 500) {
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 
@@ -278,6 +367,25 @@ class AdminService {
     return response.data;
   }
 
+  async uploadSignature(file: File) {
+    if (USE_MOCK) {
+      return {
+        message: "Signature uploaded successfully",
+      };
+    }
+
+    const formData = new FormData();
+    formData.append("signature", file);
+
+    const response = await apiClient.post("/admin/signature-upload", formData, {
+      headers: {
+        "Content-Type": "multipart/form-data",
+      },
+    });
+
+    return response.data;
+  }
+
   // Super Admin - LGA Management
   async getAllLGAs(filters?: { status?: string; state?: string }) {
     if (USE_MOCK) {
@@ -301,10 +409,12 @@ class AdminService {
 
       const response = await apiClient.get(url);
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to load local governments";
+        serviceError.response?.data?.message ||
+        "Failed to load local governments";
 
       if (status === 401) {
         throw new Error("Authentication failed. Please log in again.");
@@ -316,7 +426,7 @@ class AdminService {
         throw new Error(
           "Too many requests. Please wait a moment before trying again.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -338,10 +448,11 @@ class AdminService {
     try {
       const response = await apiClient.post("/admin/super/invite-lg", data);
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to invite LG admin";
+        serviceError.response?.data?.message || "Failed to invite LG admin";
 
       if (status === 400) {
         throw new Error(
@@ -361,7 +472,7 @@ class AdminService {
         throw new Error(
           message || "Validation error. Please check the form fields.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -404,7 +515,13 @@ class AdminService {
     user?: string;
   }) {
     if (USE_MOCK) {
-      return mockAdminService.getAuditLog(params);
+      const mockResponse = await mockAdminService.getAuditLog(params);
+      return {
+        count: mockResponse.count || 0,
+        next: null,
+        previous: null,
+        results: mockResponse.results || [],
+      };
     }
 
     const queryParams = new URLSearchParams();
@@ -422,15 +539,22 @@ class AdminService {
       : "/admin/super/audit-logs";
 
     const response = await apiClient.get(url);
-    return response.data;
+    return (
+      response.data?.data || {
+        count: 0,
+        next: null,
+        previous: null,
+        results: [],
+      }
+    );
   }
 
   async getAuditLogById(id: string) {
     if (USE_MOCK) {
       // Mock service returns single audit log by filtering
       const allLogs = await mockAdminService.getAuditLog();
-      const log = allLogs.results?.find((log: any) => log.id === id);
-      return { data: log };
+      const log = allLogs.results?.find((log) => log.id === id);
+      return log || null;
     }
 
     const response = await apiClient.get(`/admin/super/audit-log/${id}`);
@@ -456,10 +580,11 @@ class AdminService {
         },
       });
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to invite LG admin";
+        serviceError.response?.data?.message || "Failed to invite LG admin";
 
       if (status === 400) {
         throw new Error(
@@ -479,7 +604,7 @@ class AdminService {
         throw new Error(
           message || "Validation error. Please check the form fields.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -521,10 +646,11 @@ class AdminService {
         },
       );
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to update LG admin";
+        serviceError.response?.data?.message || "Failed to update LG admin";
 
       if (status === 400) {
         throw new Error(message || "Invalid request. Please check the fields.");
@@ -540,7 +666,7 @@ class AdminService {
         throw new Error(
           message || "Validation error. Please check the form fields.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -557,10 +683,11 @@ class AdminService {
     try {
       const response = await apiClient.get("/admin/super/dashboard");
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to load dashboard";
+        serviceError.response?.data?.message || "Failed to load dashboard";
 
       if (status === 401) {
         throw new Error("Authentication failed. Please log in again.");
@@ -572,7 +699,7 @@ class AdminService {
         throw new Error(
           "Too many requests. Please wait a moment before trying again.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -587,11 +714,22 @@ class AdminService {
       const response = await apiClient.get(
         "/application-fees/local-government",
       );
-      return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+      const fees = Array.isArray(response.data?.data)
+        ? response.data.data.map((fee: unknown) =>
+            this.normalizeLgaFeeItem(fee as Partial<LGAFeeData>),
+          )
+        : [];
+
+      return {
+        ...response.data,
+        data: fees,
+      };
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message || "Failed to load LGA fee configuration";
+        serviceError.response?.data?.message ||
+        "Failed to load LGA fee configuration";
 
       if (status === 401) {
         throw new Error("Authentication failed. Please log in again.");
@@ -605,7 +743,7 @@ class AdminService {
         throw new Error(
           "Too many requests. Please wait a moment before trying again.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -628,11 +766,23 @@ class AdminService {
           },
         },
       );
-      return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+      const normalizedData = Array.isArray(response.data?.data)
+        ? response.data.data.map((fee: unknown) =>
+            this.normalizeLgaFeeItem(fee as Partial<LGAFeeData>),
+          )
+        : response.data?.data
+          ? this.normalizeLgaFeeItem(response.data.data as Partial<LGAFeeData>)
+          : response.data?.data;
+
+      return {
+        ...response.data,
+        data: normalizedData,
+      };
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message ||
+        serviceError.response?.data?.message ||
         "Failed to create LGA fee configuration";
 
       if (status === 400) {
@@ -647,20 +797,26 @@ class AdminService {
         );
       } else if (status === 409) {
         // Handle specific error format: {"error": { "local_government": [...] }}
-        const errorDetail = error.response?.data?.error?.local_government;
+        const structuredError = serviceError.response?.data?.error;
+        const errorDetail =
+          typeof structuredError === "object" && structuredError !== null
+            ? structuredError.local_government
+            : undefined;
         if (errorDetail && Array.isArray(errorDetail)) {
+          const firstError =
+            errorDetail[0] || "Fee configuration already exists for this LGA.";
           throw new Error(
-            errorDetail[0] || "Fee configuration already exists for this LGA.",
+            `${firstError} Please use Update Fees instead of creating a new one.`,
           );
         }
         throw new Error(
-          "Fee configuration already exists for this Local Government.",
+          "Fee configuration already exists for this Local Government. Please use Update Fees instead.",
         );
       } else if (status === 422) {
         throw new Error(
           message || "Validation error. Please check the fee amounts.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -683,11 +839,23 @@ class AdminService {
           },
         },
       );
-      return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+      const normalizedData = Array.isArray(response.data?.data)
+        ? response.data.data.map((fee: unknown) =>
+            this.normalizeLgaFeeItem(fee as Partial<LGAFeeData>),
+          )
+        : response.data?.data
+          ? this.normalizeLgaFeeItem(response.data.data as Partial<LGAFeeData>)
+          : response.data?.data;
+
+      return {
+        ...response.data,
+        data: normalizedData,
+      };
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
+      const status = serviceError.response?.status;
       const message =
-        error.response?.data?.message ||
+        serviceError.response?.data?.message ||
         "Failed to update LGA fee configuration";
 
       if (status === 400) {
@@ -706,7 +874,7 @@ class AdminService {
         throw new Error(
           message || "Validation error. Please check the fee amounts.",
         );
-      } else if (status >= 500) {
+      } else if ((status || 0) >= 500) {
         throw new Error("Server error. Please try again later.");
       }
 
@@ -717,7 +885,7 @@ class AdminService {
   // Admin - Application Management
   async getApplicationsReport(params?: {
     application_type?: "certificate" | "digitization";
-    [key: string]: any;
+    [key: string]: string | number | boolean | undefined;
   }) {
     const queryParams = new URLSearchParams();
     if (params) {
@@ -740,7 +908,7 @@ class AdminService {
   async exportCSV(type: "applications" | "digitizations") {
     const response = await apiClient.post(
       `/admin/export-csv?type=${type}`,
-      null,
+      undefined,
       {
         responseType: "blob",
       },
@@ -757,18 +925,19 @@ class AdminService {
         `/admin/applications/${applicationId}?application_type=${applicationType}`,
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to retrieve application details";
 
-      if (error.response?.status === 400) {
+      if (serviceError.response?.status === 400) {
         message = "Invalid application ID or type";
-      } else if (error.response?.status === 401) {
+      } else if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You are not authorized to view this application";
-      } else if (error.response?.status === 404) {
+      } else if (serviceError.response?.status === 404) {
         message = "Application not found";
-      } else if (error.response?.status >= 500) {
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 
@@ -780,6 +949,7 @@ class AdminService {
     application_type?: "certificate" | "digitization";
     page?: number;
     limit?: number;
+    status?: string;
   }) {
     try {
       const queryParams = new URLSearchParams();
@@ -797,17 +967,47 @@ class AdminService {
         : "/admin/applications";
 
       const response = await apiClient.get(url);
-      return response.data;
-    } catch (error: any) {
+      const payload = response.data as {
+        count?: number;
+        next?: string | null;
+        previous?: string | null;
+        results?: unknown[];
+        data?: {
+          count?: number;
+          next?: string | null;
+          previous?: string | null;
+          results?: unknown[];
+        };
+      };
+
+      if (payload?.data && Array.isArray(payload.data.results)) {
+        return {
+          count: payload.data.count ?? payload.data.results.length,
+          next: payload.data.next ?? null,
+          previous: payload.data.previous ?? null,
+          results: payload.data.results,
+        };
+      }
+
+      return {
+        count:
+          payload?.count ??
+          (Array.isArray(payload?.results) ? payload.results.length : 0),
+        next: payload?.next ?? null,
+        previous: payload?.previous ?? null,
+        results: Array.isArray(payload?.results) ? payload.results : [],
+      };
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to retrieve applications";
 
-      if (error.response?.status === 400) {
+      if (serviceError.response?.status === 400) {
         message = "Invalid query parameters";
-      } else if (error.response?.status === 401) {
+      } else if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You do not have permission to view applications";
-      } else if (error.response?.status >= 500) {
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 
@@ -819,14 +1019,15 @@ class AdminService {
     try {
       const response = await apiClient.get("/digitization/overview");
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to retrieve digitization overview";
 
-      if (error.response?.status === 401) {
+      if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You are not authorized to access digitization overview";
-      } else if (error.response?.status >= 500) {
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 
@@ -878,21 +1079,25 @@ class AdminService {
         },
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to manage application";
+      const backendMessage = getBackendErrorMessage(error, message);
 
-      if (error.response?.status === 400) {
-        message = "Invalid application data or action";
-      } else if (error.response?.status === 401) {
+      if (serviceError.response?.status === 400) {
+        message = backendMessage;
+      } else if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You are not authorized to manage this application";
-      } else if (error.response?.status === 404) {
+      } else if (serviceError.response?.status === 404) {
         message = "Application not found";
-      } else if (error.response?.status === 422) {
-        message = error.response?.data?.message || "Validation error";
-      } else if (error.response?.status >= 500) {
+      } else if (serviceError.response?.status === 422) {
+        message = backendMessage;
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
+      } else {
+        message = backendMessage;
       }
 
       throw new Error(message);
@@ -908,14 +1113,15 @@ class AdminService {
     try {
       const response = await apiClient.get("/admin/dashboard");
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to retrieve dashboard data";
 
-      if (error.response?.status === 401) {
+      if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You are not authorized to access the dashboard";
-      } else if (error.response?.status >= 500) {
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 
@@ -928,14 +1134,15 @@ class AdminService {
     try {
       const response = await apiClient.get("/admin/report-analytics");
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const serviceError = this.toServiceError(error);
       let message = "Failed to retrieve report analytics";
 
-      if (error.response?.status === 401) {
+      if (serviceError.response?.status === 401) {
         message = "Authentication failed. Please log in again.";
-      } else if (error.response?.status === 403) {
+      } else if (serviceError.response?.status === 403) {
         message = "You are not authorized to view analytics";
-      } else if (error.response?.status >= 500) {
+      } else if ((serviceError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 

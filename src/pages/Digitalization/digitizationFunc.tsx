@@ -10,7 +10,6 @@ import {
 } from "../../utils/validation";
 import {
   digitizationService,
-  paymentService,
   applicationService,
   adminService,
 } from "../../services";
@@ -198,25 +197,14 @@ export function DigitizationFlow() {
         certificateFile: certificateUpload.file as File,
       });
 
-      // Extract application ID from response - handle various backend shapes
-      const responseData = submitResult?.data ?? submitResult;
-      const applicationId =
-        // Common shape: data.user_data.id
-        responseData?.user_data?.id ??
-        // Direct id on data
-        responseData?.id ??
-        // Nested: data.data.id
-        (responseData as any)?.data?.id ??
-        // Fallbacks from original object
-        submitResult?.data?.user_data?.id ??
-        (submitResult as any)?.data?.data?.id;
+      // Extract application ID from API contract
+      const applicationId = submitResult?.data?.user_data?.id;
 
-      console.log("Digitization submit response structure:", responseData);
+      console.log("Digitization submit response:", submitResult);
       console.log("Extracted applicationId:", applicationId);
 
       if (!applicationId) {
         console.error("Submit result structure:", submitResult);
-        console.error("Response data:", responseData);
         toast.error(
           "Application submitted but couldn't retrieve application ID. Please check console or contact support.",
         );
@@ -282,8 +270,8 @@ export function DigitizationFlow() {
         application_id: applicationId,
       });
 
-      if (result.data.status) {
-        setPaymentReference(result.data.data.reference);
+      if (result.status) {
+        setPaymentReference(result.data.reference);
 
         // Use Paystack inline popup modal
         const paystackKey =
@@ -299,7 +287,7 @@ export function DigitizationFlow() {
           key: paystackKey,
           email: formData.email,
           amount: (digitizationAmount + 500) * 100, // Convert to kobo (NGN minor unit)
-          ref: result.data.data.reference,
+          ref: result.data.reference,
           callback: function (response: any) {
             toast.success(
               "Payment successful! Reference: " + response.reference,
@@ -445,27 +433,14 @@ export function DigitizationFlow() {
     setIsSubmitting(true);
 
     try {
-      const verification = await paymentService.verifyPayment(paymentReference);
-
-      if (verification.status !== "success") {
-        toast.error("Payment not verified. Please complete payment first.");
-        setIsSubmitting(false);
-        return;
-      }
-
-      toast.success(
-        "Payment verified! Your digitization request has been submitted successfully.",
-      );
+      toast.success("Digitization request submitted successfully.");
 
       setTimeout(() => {
         navigate("/applicant-dashboard");
       }, 1500);
     } catch (error: any) {
-      console.error("Payment verification error:", error);
-      toast.error(
-        error.response?.data?.message ||
-          "Failed to verify payment. Please try again.",
-      );
+      console.error("Digitization submission completion error:", error);
+      toast.error("Failed to finalize request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }

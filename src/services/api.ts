@@ -12,6 +12,7 @@ interface ImportMeta {
 import axios, {
   AxiosInstance,
   AxiosError,
+  AxiosResponse,
   InternalAxiosRequestConfig,
 } from "axios";
 import { tokenManager } from "../utils/tokenManager";
@@ -46,48 +47,107 @@ apiClient.interceptors.request.use(
   },
   (error: AxiosError) => {
     return Promise.reject(error);
-  }
+  },
 );
 
-// Response interceptor - Handle token refresh
+let isRefreshing = false;
+let failedQueue: Array<{
+  resolve: (token: string) => void;
+  reject: (error: unknown) => void;
+}> = [];
+
+const processQueue = (error: unknown, token: string | null = null) => {
+  failedQueue.forEach(({ resolve, reject }) => {
+    if (error) {
+      reject(error);
+      return;
+    }
+
+    resolve(token ?? "");
+  });
+
+  failedQueue = [];
+};
+
+// Response interceptor - Handle token refresh with queueing
 apiClient.interceptors.response.use(
-  (response) => response,
+  (response: AxiosResponse) => response,
   async (error: AxiosError) => {
     const originalRequest = error.config as InternalAxiosRequestConfig & {
       _retry?: boolean;
     };
 
-    // If 401 and we haven't retried yet, try to refresh token
-    if (error.response?.status === 401 && !originalRequest._retry) {
-      originalRequest._retry = true;
+    const isUnauthorized = error.response?.status === 401;
+    const isRefreshRequest = originalRequest?.url?.includes("/auth/refresh/");
 
-      try {
-        const refreshToken = tokenManager.getRefreshToken();
-
-        if (refreshToken) {
-          const response = await axios.post(`${API_URL}/auth/refresh/`, {
-            refresh: refreshToken,
-          });
-
-          const { access } = response.data;
-          tokenManager.setAccessToken(access);
-
-          // Retry original request with new token
-          if (originalRequest.headers) {
-            originalRequest.headers.Authorization = `Bearer ${access}`;
-          }
-          return apiClient(originalRequest);
-        }
-      } catch (refreshError) {
-        // Refresh failed - logout user
-        tokenManager.clearTokens();
-        window.location.href = "/login";
-        return Promise.reject(refreshError);
-      }
+    if (!isUnauthorized || !originalRequest || isRefreshRequest) {
+      return Promise.reject(error);
     }
 
-    return Promise.reject(error);
-  }
+    if (originalRequest._retry) {
+      return Promise.reject(error);
+    }
+
+    if (isRefreshing) {
+      return new Promise((resolve, reject) => {
+        failedQueue.push({
+          resolve: (token: string) => {
+            if (originalRequest.headers) {
+              originalRequest.headers.Authorization = `Bearer ${token}`;
+            }
+            resolve(apiClient(originalRequest));
+          },
+          reject,
+        });
+      });
+    }
+
+    originalRequest._retry = true;
+    isRefreshing = true;
+
+    try {
+      const refreshToken = tokenManager.getRefreshToken();
+
+      if (!refreshToken) {
+        throw new Error("No refresh token available");
+      }
+
+      const refreshResponse = await axios.post(`${API_URL}/auth/refresh/`, {
+        refresh: refreshToken,
+      });
+
+      const nextAccessToken =
+        refreshResponse.data?.access ??
+        refreshResponse.data?.data?.access ??
+        refreshResponse.data?.["access-token"] ??
+        null;
+
+      if (!nextAccessToken) {
+        throw new Error("Unable to refresh access token");
+      }
+
+      tokenManager.setAccessToken(nextAccessToken);
+      processQueue(null, nextAccessToken);
+
+      if (originalRequest.headers) {
+        originalRequest.headers.Authorization = `Bearer ${nextAccessToken}`;
+      }
+
+      return apiClient(originalRequest);
+    } catch (refreshError) {
+      processQueue(refreshError, null);
+      tokenManager.clearTokens();
+      sessionStorage.removeItem("userPermissions");
+
+      if (window.location.pathname !== "/login") {
+        window.location.href = "/login";
+      }
+
+      return Promise.reject(refreshError);
+    } finally {
+      isRefreshing = false;
+    }
+  },
 );
 
 export default apiClient;

@@ -1,23 +1,28 @@
-import { useState } from 'react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useState } from "react";
+import { useNavigate, useSearchParams } from "react-router-dom";
 import { CertificateDownloadDesign } from "./certificateDownloadDesign";
-import { toast } from 'sonner';
-import { certificateService } from '../../services'; // ✅ Import service
+import { toast } from "sonner";
+import { certificateService } from "../../services"; // ✅ Import service
 
 interface CertificateDownloadProps {
   isDigitized?: boolean;
 }
 
-export function CertificateDownload({ isDigitized = false }: CertificateDownloadProps) {
+export function CertificateDownload({
+  isDigitized = false,
+}: CertificateDownloadProps) {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
-  const certificateId = searchParams.get('id'); // ✅ Get ID from URL
+  const certificateId = searchParams.get("cert_id");
+  const certificateTypeParam = searchParams.get("type");
+  const certificateType: "certificate" | "digitization" =
+    certificateTypeParam === "digitization" ? "digitization" : "certificate";
   const [isDownloading, setIsDownloading] = useState(false);
 
   // ✅ Real download handler
   const handleDownload = async () => {
     if (!certificateId) {
-      toast.error('Certificate ID not found');
+      toast.error("Certificate ID not found");
       return;
     }
 
@@ -25,22 +30,27 @@ export function CertificateDownload({ isDigitized = false }: CertificateDownload
 
     try {
       // ✅ Call API service
-      const blob = await certificateService.downloadCertificate(certificateId);
-      
+      const blob = await certificateService.downloadCertificate(
+        certificateId,
+        certificateType,
+      );
+
       // ✅ Create download link
       const url = window.URL.createObjectURL(blob);
-      const link = document.createElement('a');
+      const link = document.createElement("a");
       link.href = url;
       link.download = `certificate-${certificateId}.pdf`;
       document.body.appendChild(link);
       link.click();
       document.body.removeChild(link);
       window.URL.revokeObjectURL(url);
-      
-      toast.success('Certificate downloaded successfully!');
+
+      toast.success("Certificate downloaded successfully!");
     } catch (error: any) {
-      console.error('Download error:', error);
-      toast.error(error.response?.data?.message || 'Failed to download certificate');
+      console.error("Download error:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to download certificate",
+      );
     } finally {
       setIsDownloading(false);
     }
@@ -50,10 +60,10 @@ export function CertificateDownload({ isDigitized = false }: CertificateDownload
     <CertificateDownloadDesign
       onNavigate={(page: string) => {
         const routes: Record<string, string> = {
-          'verify': '/verify',
-          'applicant-dashboard': '/applicant-dashboard',
+          verify: "/verify",
+          "applicant-dashboard": "/applicant-dashboard",
         };
-        navigate(routes[page] || '/');
+        navigate(routes[page] || "/");
       }}
       isDigitized={isDigitized}
       handleDownload={handleDownload}

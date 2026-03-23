@@ -1,6 +1,7 @@
 import { Navigate } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
 import type { UserRole } from "../Types/types";
+import { tokenManager } from "../utils/tokenManager";
 
 interface ProtectedRouteProps {
   children: React.ReactNode;
@@ -12,8 +13,10 @@ export function ProtectedRoute({
   allowedRoles,
 }: ProtectedRouteProps) {
   const { isAuthenticated, isLoading, user } = useAuth();
+  const shouldWaitForRefresh =
+    !isAuthenticated && !user && tokenManager.canRefresh();
 
-  if (isLoading) {
+  if (isLoading || shouldWaitForRefresh) {
     return (
       <div className="min-h-screen flex items-center justify-center">
         <div className="text-center">

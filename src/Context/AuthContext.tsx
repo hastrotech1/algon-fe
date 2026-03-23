@@ -3,6 +3,7 @@ import authService from "../services/auth.service";
 import type { UserRole } from "../Types/types";
 import { tokenManager } from "../utils/tokenManager";
 import { useNavigate } from "react-router-dom";
+import { getBackendErrorMessage } from "../utils/errorHelpers";
 
 interface User {
   id: string;
@@ -23,7 +24,7 @@ interface AuthContextType {
 }
 
 export const AuthContext = createContext<AuthContextType | undefined>(
-  undefined
+  undefined,
 );
 
 export function AuthProvider({ children }: { children: ReactNode }) {
@@ -35,17 +36,84 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [isAuthenticated, setIsAuthenticated] = useState<boolean>(false);
 
   useEffect(() => {
-    // Check if user is already logged in
     const initAuth = async () => {
       try {
-        if (authService.isAuthenticated()) {
-          const userData = authService.getUserData();
-          setUser(userData);
+        const hasActiveAuth = authService.isAuthenticated();
+        const canRefresh = tokenManager.canRefresh();
+
+        if (!hasActiveAuth && !canRefresh) {
+          return;
+        }
+
+        const storedUser = authService.getUserData();
+        if (storedUser) {
+          setUser(storedUser);
           setIsAuthenticated(true);
         }
-      } catch (error) {
+
+        const currentUser = await authService.getCurrentUser();
+        const mappedRole: UserRole =
+          currentUser.role === "super-admin"
+            ? "superAdmin"
+            : currentUser.role === "lg-admin" || currentUser.role === "admin"
+              ? "admin"
+              : "applicant";
+
+        const normalizedUser: User = {
+          id: currentUser.id,
+          email: currentUser.email,
+          role: mappedRole,
+          name:
+            `${currentUser.first_name ?? ""} ${currentUser.last_name ?? ""}`.trim() ||
+            currentUser.email,
+          phone: currentUser.phone_number ?? undefined,
+          nin: currentUser.nin ?? undefined,
+        };
+
+        tokenManager.setUserData(normalizedUser);
+        setUser(normalizedUser);
+        setIsAuthenticated(true);
+
+        if (mappedRole === "admin") {
+          const permissions =
+            Array.isArray(currentUser.user_permissions) &&
+            currentUser.user_permissions.length > 0
+              ? currentUser.user_permissions
+              : [
+                  "approveApplications",
+                  "viewAnalytics",
+                  "manageFees",
+                  "manageRequirements",
+                  "exportData",
+                ];
+
+          sessionStorage.setItem(
+            "userPermissions",
+            JSON.stringify(permissions),
+          );
+        }
+      } catch (error: unknown) {
         console.error("Auth init error:", error);
-        authService.logout();
+        const status =
+          typeof error === "object" && error !== null
+            ? (error as { response?: { status?: number } }).response?.status
+            : undefined;
+        const storedUser = authService.getUserData();
+
+        const shouldClearSession =
+          status === 401 ||
+          status === 403 ||
+          (!storedUser && !tokenManager.canRefresh());
+
+        if (shouldClearSession) {
+          tokenManager.clearTokens();
+          sessionStorage.removeItem("userPermissions");
+          setUser(null);
+          setIsAuthenticated(false);
+        } else if (storedUser) {
+          setUser(storedUser);
+          setIsAuthenticated(true);
+        }
       } finally {
         setIsLoading(false);
       }
@@ -72,18 +140,16 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (response.user.role === "admin") {
         try {
           const userInfo = await authService.getCurrentUser();
-          // Store permissions in localStorage - check if array has items
           if (
             userInfo.user_permissions &&
             Array.isArray(userInfo.user_permissions) &&
             userInfo.user_permissions.length > 0
           ) {
-            localStorage.setItem(
+            sessionStorage.setItem(
               "userPermissions",
-              JSON.stringify(userInfo.user_permissions)
+              JSON.stringify(userInfo.user_permissions),
             );
           } else {
-            // If no permissions from API or empty array, set default permissions for LG admins
             const defaultPermissions = [
               "approveApplications",
               "viewAnalytics",
@@ -91,15 +157,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
               "manageRequirements",
               "exportData",
             ];
-            localStorage.setItem(
+            sessionStorage.setItem(
               "userPermissions",
-              JSON.stringify(defaultPermissions)
+              JSON.stringify(defaultPermissions),
             );
           }
         } catch (error) {
           console.warn(
             "Failed to fetch user permissions, using defaults:",
-            error
+            error,
           );
           // Set default permissions if fetch fails
           const defaultPermissions = [
@@ -109,9 +175,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
             "manageRequirements",
             "exportData",
           ];
-          localStorage.setItem(
+          sessionStorage.setItem(
             "userPermissions",
-            JSON.stringify(defaultPermissions)
+            JSON.stringify(defaultPermissions),
           );
         }
       }
@@ -126,10 +192,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
 
       navigate(targetPath);
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error("❌ Login error:", err);
-      const errorMessage =
-        err.response?.data?.message || "Invalid email or password";
+      const errorMessage = getBackendErrorMessage(
+        err,
+        "Invalid email or password",
+      );
       setError(errorMessage);
       throw err;
     } finally {
@@ -143,8 +211,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       setUser(null);
       setIsAuthenticated(false);
       tokenManager.clearTokens();
-      // Clear permissions from localStorage
-      localStorage.removeItem("userPermissions");
+      sessionStorage.removeItem("userPermissions");
       navigate("/login");
     } catch (error) {
       console.error("Logout error:", error);
@@ -157,18 +224,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     setError(null);
 
     try {
-      const response = await authService.register(data);
-
-      if (response.access && response.refresh) {
-        tokenManager.setAccessToken(response.access);
-        tokenManager.setRefreshToken(response.refresh);
-        setUser(response.user);
-        setIsAuthenticated(true);
-        navigate("/applicant-dashboard");
-      }
-    } catch (err: any) {
+      await authService.register(data);
+    } catch (err: unknown) {
       console.error("Registration error:", err);
-      const errorMessage = err.response?.data?.message || "Registration failed";
+      const errorMessage = getBackendErrorMessage(err, "Registration failed");
       setError(errorMessage);
       throw err;
     } finally {

@@ -15,13 +15,11 @@ import {
   XCircle,
   Calendar,
   MapPin,
-  User,
 } from "lucide-react";
 
 type VerificationResult = "valid" | "invalid" | null;
 
 interface CertificateData {
-  holderName: string;
   certificateId: string;
   lga: string;
   state: string;
@@ -37,7 +35,7 @@ interface CertificateVerificationDesignProps {
   verificationResult: VerificationResult;
   certificateData: CertificateData | null; // ✅ Add this
   isLoading: boolean;
-  handleVerify: (e: React.FormEvent) => void;
+  handleVerify: () => void;
   onNavigate: (page: string) => void;
 }
 
@@ -96,7 +94,7 @@ export function CertificateVerificationDesign({
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <form onSubmit={handleVerify} className="space-y-4">
+            <div className="space-y-4">
               <div className="flex gap-4">
                 <Input
                   placeholder="Enter Certificate ID (e.g., CERT-IKJ-2025-001)"
@@ -105,7 +103,8 @@ export function CertificateVerificationDesign({
                   className="rounded-lg flex-1"
                 />
                 <Button
-                  type="submit"
+                  type="button"
+                  onClick={handleVerify}
                   className="rounded-lg"
                   disabled={isLoading}
                 >
@@ -113,7 +112,7 @@ export function CertificateVerificationDesign({
                   {isLoading ? "Verifying..." : "Verify"}
                 </Button>
               </div>
-            </form>
+            </div>
           </CardContent>
         </Card>
 
@@ -133,15 +132,6 @@ export function CertificateVerificationDesign({
 
               <div className="bg-white rounded-xl p-6 space-y-4">
                 <div className="grid md:grid-cols-2 gap-6">
-                  <div className="flex items-start gap-3">
-                    <User className="w-5 h-5 text-primary mt-0.5" />
-                    <div>
-                      <p className="text-xs text-muted-foreground">
-                        Certificate Holder
-                      </p>
-                      <p className="text-sm">{certificateData.holderName}</p>
-                    </div>
-                  </div>
                   <div className="flex items-start gap-3">
                     <Shield className="w-5 h-5 text-primary mt-0.5" />
                     <div>
@@ -170,7 +160,7 @@ export function CertificateVerificationDesign({
                       </p>
                       <p className="text-sm">
                         {new Date(
-                          certificateData.issueDate
+                          certificateData.issueDate,
                         ).toLocaleDateString()}
                       </p>
                     </div>

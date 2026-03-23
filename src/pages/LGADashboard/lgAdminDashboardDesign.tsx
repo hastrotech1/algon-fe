@@ -67,6 +67,7 @@ import {
   Pie,
   Cell,
 } from "recharts";
+import { toast } from "sonner";
 import type {
   Application,
   DigitizationRequest,
@@ -107,10 +108,33 @@ interface LGAdminDashboardDesignProps {
   } | null;
   reportAnalytics?: any;
   dynamicFields: DynamicField[];
+  lgaFees?: {
+    application_fee?: number;
+    digitization_fee?: number;
+    regeneration_fee?: number;
+  } | null;
+  dashboardMetrics?: {
+    pending_applications: number;
+    approved_certificates: number;
+    rejected: number;
+    total_revenue: number;
+  } | null;
   weeklyData: ChartDataPoint[];
   approvalData: ApprovalData[];
+  handleManageApplication: (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => Promise<void>;
   handleLogout: () => void;
-  handleAddDynamicField: (field: Omit<DynamicField, "id">) => void;
+  handleAddDynamicField: (field: {
+    field_label: string;
+    field_name?: string;
+    is_required: boolean;
+    field_type: "text" | "number" | "date" | "file" | "dropdown";
+    dropdown_options?: string[];
+  }) => void;
   handleUpdateDynamicField: (
     fieldId: string,
     fieldData: {
@@ -126,6 +150,7 @@ interface LGAdminDashboardDesignProps {
     digitization_fee: number;
     regeneration_fee: number;
   }) => void;
+  handleUploadSignature: (file: File) => Promise<void>;
   handleExportApplications: () => void;
   handleExportDigitization: () => void;
   handleDownloadReport: (reportType: string) => void;
@@ -137,6 +162,7 @@ interface LGAdminDashboardDesignProps {
   hasPrevious: boolean;
   onPageChange: (page: number) => void;
   onPageSizeChange: (size: number) => void;
+  localGovernmentName: string;
   onNavigate: (page: string) => void;
 }
 
@@ -162,13 +188,16 @@ export function LGAdminDashboardDesign({
   reportAnalytics,
   dynamicFields,
   lgaFees,
+  dashboardMetrics,
   weeklyData,
   approvalData,
+  handleManageApplication,
   handleLogout,
   handleAddDynamicField,
   handleUpdateDynamicField,
   handleDeleteDynamicField,
   handleSaveFees,
+  handleUploadSignature,
   handleExportApplications,
   handleExportDigitization,
   handleDownloadReport,
@@ -180,6 +209,7 @@ export function LGAdminDashboardDesign({
   hasPrevious,
   onPageChange,
   onPageSizeChange,
+  localGovernmentName,
   onNavigate,
 }: LGAdminDashboardDesignProps) {
   return (
@@ -271,7 +301,7 @@ export function LGAdminDashboardDesign({
                   <Menu className="w-5 h-5" />
                 </Button>
                 <div>
-                  <div className="text-foreground">Ikeja Local Government</div>
+                  <div className="text-foreground">{localGovernmentName}</div>
                   <div className="text-xs text-muted-foreground">
                     Administrator Portal
                   </div>
@@ -289,8 +319,11 @@ export function LGAdminDashboardDesign({
           {activeTab === "dashboard" && (
             <DashboardTab
               applications={applications}
+              dashboardMetrics={dashboardMetrics}
               weeklyData={weeklyData}
               approvalData={approvalData}
+              handleManageApplication={handleManageApplication}
+              localGovernmentName={localGovernmentName}
             />
           )}
 
@@ -304,6 +337,7 @@ export function LGAdminDashboardDesign({
               dateFilter={dateFilter}
               setDateFilter={setDateFilter}
               onExport={handleExportApplications}
+              handleManageApplication={handleManageApplication}
               currentPage={currentPage}
               pageSize={pageSize}
               totalItems={totalItems}
@@ -320,6 +354,7 @@ export function LGAdminDashboardDesign({
               requests={digitizationRequests}
               overviewData={digitizationOverview}
               onExport={handleExportDigitization}
+              handleManageApplication={handleManageApplication}
               currentPage={currentPage}
               pageSize={pageSize}
               totalItems={totalItems}
@@ -346,6 +381,7 @@ export function LGAdminDashboardDesign({
               handleUpdateDynamicField={handleUpdateDynamicField}
               handleDeleteDynamicField={handleDeleteDynamicField}
               handleSaveFees={handleSaveFees}
+              handleUploadSignature={handleUploadSignature}
             />
           )}
         </div>
@@ -361,21 +397,37 @@ export function LGAdminDashboardDesign({
 // Dashboard Tab
 interface DashboardTabProps {
   applications: Application[];
+  dashboardMetrics?: {
+    pending_applications: number;
+    approved_certificates: number;
+    rejected: number;
+    total_revenue: number;
+  } | null;
   weeklyData: ChartDataPoint[];
   approvalData: ApprovalData[];
+  handleManageApplication: (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => Promise<void>;
+  localGovernmentName: string;
 }
 
 function DashboardTab({
   applications,
+  dashboardMetrics,
   weeklyData,
   approvalData,
+  handleManageApplication,
+  localGovernmentName,
 }: DashboardTabProps) {
   return (
     <div className="space-y-6">
       <div>
         <h2>Overview</h2>
         <p className="text-muted-foreground">
-          Manage certificate applications for Ikeja LGA
+          Manage certificate applications for {localGovernmentName}
         </p>
       </div>
 
@@ -383,28 +435,28 @@ function DashboardTab({
       <div className="grid md:grid-cols-2 lg:grid-cols-4 gap-6">
         <StatsCard
           title="Pending Applications"
-          value="23"
+          value={dashboardMetrics?.pending_applications ?? 0}
           icon={FileText}
           trend="+5 from yesterday"
           trendUp={true}
         />
         <StatsCard
           title="Approved Certificates"
-          value="145"
+          value={dashboardMetrics?.approved_certificates ?? 0}
           icon={CheckCircle}
           trend="+12 this week"
           trendUp={true}
         />
         <StatsCard
           title="Rejected"
-          value="12"
+          value={dashboardMetrics?.rejected ?? 0}
           icon={XCircle}
           trend="-2 from last week"
           trendUp={false}
         />
         <StatsCard
           title="Total Revenue"
-          value="₦990K"
+          value={`₦${(dashboardMetrics?.total_revenue ?? 0).toLocaleString()}`}
           icon={DollarSign}
           trend="+8.2% this month"
           trendUp={true}
@@ -504,7 +556,10 @@ function DashboardTab({
                     {app.dateApplied}
                   </TableCell>
                   <TableCell className="text-center align-middle">
-                    <ApplicationDialog application={app} />
+                    <ApplicationDialog
+                      application={app}
+                      onManageApplication={handleManageApplication}
+                    />
                   </TableCell>
                 </TableRow>
               ))}
@@ -526,6 +581,12 @@ interface ApplicationsTabProps {
   dateFilter: string;
   setDateFilter: (filter: string) => void;
   onExport: () => void;
+  handleManageApplication: (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => Promise<void>;
   currentPage: number;
   pageSize: number;
   totalItems: number;
@@ -545,6 +606,7 @@ function ApplicationsTab({
   dateFilter,
   setDateFilter,
   onExport,
+  handleManageApplication,
   currentPage,
   pageSize,
   totalItems,
@@ -668,7 +730,10 @@ function ApplicationsTab({
                   </TableCell>
                   <TableCell className="text-center align-middle">
                     <div className="flex gap-2 justify-center">
-                      <ApplicationDialog application={app} />
+                      <ApplicationDialog
+                        application={app}
+                        onManageApplication={handleManageApplication}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -700,6 +765,12 @@ interface DigitizationTabProps {
     revenue_generated: number;
   } | null;
   onExport: () => void;
+  handleManageApplication: (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => Promise<void>;
   currentPage: number;
   pageSize: number;
   totalItems: number;
@@ -714,6 +785,7 @@ function DigitizationTab({
   requests,
   overviewData,
   onExport,
+  handleManageApplication,
   currentPage,
   pageSize,
   totalItems,
@@ -869,7 +941,10 @@ function DigitizationTab({
                   </TableCell>
                   <TableCell className="text-center align-middle">
                     <div className="flex gap-2 justify-center">
-                      <DigitizationDialog request={req} />
+                      <DigitizationDialog
+                        request={req}
+                        onManageApplication={handleManageApplication}
+                      />
                     </div>
                   </TableCell>
                 </TableRow>
@@ -1077,7 +1152,13 @@ function ReportsTab({ reportAnalytics, onDownloadReport }: ReportsTabProps) {
 interface SettingsTabProps {
   dynamicFields: DynamicField[];
   lgaFees?: any;
-  handleAddDynamicField: (field: Omit<DynamicField, "id">) => void;
+  handleAddDynamicField: (field: {
+    field_label: string;
+    field_name?: string;
+    is_required: boolean;
+    field_type: "text" | "number" | "date" | "file" | "dropdown";
+    dropdown_options?: string[];
+  }) => void;
   handleUpdateDynamicField: (
     fieldId: string,
     fieldData: {
@@ -1093,6 +1174,7 @@ interface SettingsTabProps {
     digitization_fee: number;
     regeneration_fee: number;
   }) => void;
+  handleUploadSignature: (file: File) => Promise<void>;
 }
 
 function SettingsTab({
@@ -1102,6 +1184,7 @@ function SettingsTab({
   handleUpdateDynamicField,
   handleDeleteDynamicField,
   handleSaveFees,
+  handleUploadSignature,
 }: SettingsTabProps) {
   const [isAddFieldModalOpen, setIsAddFieldModalOpen] = useState(false);
   const [isEditFieldModalOpen, setIsEditFieldModalOpen] = useState(false);
@@ -1119,10 +1202,18 @@ function SettingsTab({
     is_required: false,
     dropdown_options: ["Option 1", "Option 2"],
   });
+  const [signatureFile, setSignatureFile] = useState<File | null>(null);
+  const [isUploadingSignature, setIsUploadingSignature] = useState(false);
+  const parsedApplicationFee =
+    Number.parseFloat(lgaFees?.application_fee ?? "0") || 0;
+  const parsedDigitizationFee =
+    Number.parseFloat(lgaFees?.digitization_fee ?? "0") || 0;
+  const parsedRegenerationFee =
+    Number.parseFloat(lgaFees?.regeneration_fee ?? "0") || 0;
   const [feeData, setFeeData] = useState({
-    application_fee: lgaFees?.application_fee || 0,
-    digitization_fee: lgaFees?.digitization_fee || 0,
-    regeneration_fee: lgaFees?.regeneration_fee || 0,
+    application_fee: parsedApplicationFee,
+    digitization_fee: parsedDigitizationFee,
+    regeneration_fee: parsedRegenerationFee,
   });
 
   const handleEditClick = (field: DynamicField) => {
@@ -1316,7 +1407,7 @@ function SettingsTab({
                       Application Fee
                     </p>
                     <p className="text-3xl font-bold text-green-900">
-                      ₦{parseFloat(lgaFees.application_fee).toLocaleString()}
+                      ₦{parsedApplicationFee.toLocaleString()}
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-green-200 flex items-center justify-center">
@@ -1335,7 +1426,7 @@ function SettingsTab({
                       Digitization Fee
                     </p>
                     <p className="text-3xl font-bold text-purple-900">
-                      ₦{parseFloat(lgaFees.digitization_fee).toLocaleString()}
+                      ₦{parsedDigitizationFee.toLocaleString()}
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-purple-200 flex items-center justify-center">
@@ -1354,7 +1445,7 @@ function SettingsTab({
                       Regeneration Fee
                     </p>
                     <p className="text-3xl font-bold text-orange-900">
-                      ₦{parseFloat(lgaFees.regeneration_fee).toLocaleString()}
+                      ₦{parsedRegenerationFee.toLocaleString()}
                     </p>
                   </div>
                   <div className="w-12 h-12 rounded-xl bg-orange-200 flex items-center justify-center">
@@ -1500,6 +1591,48 @@ function SettingsTab({
           </div>
         </DialogContent>
       </Dialog>
+
+      {/* Signature Upload */}
+      <Card className="rounded-xl border shadow-sm">
+        <CardHeader className="border-b border-gray-100 bg-gradient-to-r from-gray-50 to-white">
+          <CardTitle className="text-lg font-semibold text-gray-900">
+            LG Admin Signature
+          </CardTitle>
+          <CardDescription className="text-sm text-gray-600">
+            Upload the official signature used on approved certificates.
+          </CardDescription>
+        </CardHeader>
+        <CardContent className="p-6 space-y-4">
+          <div className="space-y-2">
+            <Label htmlFor="signature-upload">Signature File</Label>
+            <Input
+              id="signature-upload"
+              type="file"
+              accept="image/png,image/jpeg,image/jpg"
+              onChange={(e) => setSignatureFile(e.target.files?.[0] || null)}
+            />
+            <p className="text-xs text-muted-foreground">
+              Supported formats: PNG, JPG, JPEG.
+            </p>
+          </div>
+          <Button
+            className="!bg-blue-600 hover:!bg-blue-700 !text-white"
+            disabled={!signatureFile || isUploadingSignature}
+            onClick={async () => {
+              if (!signatureFile) return;
+              setIsUploadingSignature(true);
+              try {
+                await handleUploadSignature(signatureFile);
+                setSignatureFile(null);
+              } finally {
+                setIsUploadingSignature(false);
+              }
+            }}
+          >
+            {isUploadingSignature ? "Uploading..." : "Upload Signature"}
+          </Button>
+        </CardContent>
+      </Card>
 
       {/* Add Field Modal */}
       <Dialog open={isAddFieldModalOpen} onOpenChange={setIsAddFieldModalOpen}>
@@ -1779,7 +1912,18 @@ function SettingsTab({
 // ============================================================================
 
 // Application Dialog
-function ApplicationDialog({ application }: { application: Application }) {
+function ApplicationDialog({
+  application,
+  onManageApplication,
+}: {
+  application: Application;
+  onManageApplication: (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => Promise<void>;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -1818,12 +1962,15 @@ function ApplicationDialog({ application }: { application: Application }) {
                 className="flex-1"
                 variant="outline"
                 onClick={async () => {
-                  const { toast } = await import("sonner");
                   toast("Reject this application?", {
                     action: {
                       label: "Reject",
-                      onClick: () => {
-                        toast.success("Application rejected");
+                      onClick: async () => {
+                        await onManageApplication(
+                          application.id,
+                          "certificate",
+                          "rejected",
+                        );
                       },
                     },
                     cancel: {
@@ -1839,19 +1986,11 @@ function ApplicationDialog({ application }: { application: Application }) {
               <Button
                 className="flex-1 !bg-green-600 hover:!bg-green-700 !text-white"
                 onClick={async () => {
-                  const { toast } = await import("sonner");
-                  toast("Approve this application?", {
-                    action: {
-                      label: "Approve",
-                      onClick: () => {
-                        toast.success("Application approved successfully!");
-                      },
-                    },
-                    cancel: {
-                      label: "Cancel",
-                      onClick: () => {},
-                    },
-                  });
+                  await onManageApplication(
+                    application.id,
+                    "certificate",
+                    "approved",
+                  );
                 }}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />
@@ -1892,7 +2031,18 @@ function ApplicationDialog({ application }: { application: Application }) {
 }
 
 // Digitization Dialog
-function DigitizationDialog({ request }: { request: DigitizationRequest }) {
+function DigitizationDialog({
+  request,
+  onManageApplication,
+}: {
+  request: DigitizationRequest;
+  onManageApplication: (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => Promise<void>;
+}) {
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -1957,12 +2107,15 @@ function DigitizationDialog({ request }: { request: DigitizationRequest }) {
                 className="flex-1"
                 variant="outline"
                 onClick={async () => {
-                  const { toast } = await import("sonner");
-                  toast("Reject this request?", {
+                  toast("Reject this digitization request?", {
                     action: {
                       label: "Reject",
-                      onClick: () => {
-                        toast.success("Request rejected");
+                      onClick: async () => {
+                        await onManageApplication(
+                          request.id,
+                          "digitization",
+                          "rejected",
+                        );
                       },
                     },
                     cancel: {
@@ -1978,21 +2131,11 @@ function DigitizationDialog({ request }: { request: DigitizationRequest }) {
               <Button
                 className="flex-1 !bg-green-600 hover:!bg-green-700 !text-white"
                 onClick={async () => {
-                  const { toast } = await import("sonner");
-                  toast("Approve and digitize this request?", {
-                    action: {
-                      label: "Approve",
-                      onClick: () => {
-                        toast.success(
-                          "Request approved and digitized successfully!",
-                        );
-                      },
-                    },
-                    cancel: {
-                      label: "Cancel",
-                      onClick: () => {},
-                    },
-                  });
+                  await onManageApplication(
+                    request.id,
+                    "digitization",
+                    "approved",
+                  );
                 }}
               >
                 <CheckCircle className="w-4 h-4 mr-2" />

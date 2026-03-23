@@ -12,7 +12,7 @@ export interface PaymentInitializeRequest {
     lga?: string;
     state?: string;
     serviceType?: "application" | "digitization";
-    [key: string]: any;
+    [key: string]: unknown;
   };
 }
 
@@ -35,7 +35,7 @@ class PaymentService {
    * Initialize payment - Backend handles Paystack
    */
   async initializePayment(
-    data: PaymentInitializeRequest
+    data: PaymentInitializeRequest,
   ): Promise<PaymentInitializeResponse> {
     if (USE_MOCK) {
       return mockPaymentService.initializePayment(data);

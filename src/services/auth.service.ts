@@ -5,6 +5,70 @@ import { mockAuthService } from "./mock.service";
 
 const USE_MOCK = false; // Mock data disabled
 
+interface AuthServiceErrorData {
+  message?: string;
+  error?: string;
+  detail?: string;
+}
+
+interface LoginPayload {
+  user_id?: string;
+  id?: string;
+  role?: string;
+  "access-token"?: string;
+  access_token?: string;
+  access?: string;
+  "refresh-token"?: string;
+  refresh_token?: string;
+  refresh?: string;
+  user?: {
+    id?: string;
+    role?: string;
+  };
+}
+
+interface AuthServiceError {
+  response?: {
+    status?: number;
+    statusText?: string;
+    data?: AuthServiceErrorData;
+  };
+  message?: string;
+  code?: string;
+  config?: {
+    url?: string;
+    method?: string;
+    baseURL?: string;
+  };
+}
+
+const toAuthServiceError = (error: unknown): AuthServiceError => {
+  if (typeof error === "object" && error !== null) {
+    return error as AuthServiceError;
+  }
+  return {};
+};
+
+const toLoginPayload = (data: unknown): LoginPayload | null => {
+  if (typeof data !== "object" || data === null) {
+    return null;
+  }
+
+  const responseData = data as {
+    data?: unknown;
+    user_id?: string;
+    role?: string;
+    [key: string]: unknown;
+  };
+
+  const nestedData = responseData.data;
+  if (typeof nestedData === "object" && nestedData !== null) {
+    return nestedData as LoginPayload;
+  }
+
+  return responseData as LoginPayload;
+};
+
 export interface LoginRequest {
   email: string;
   password: string;
@@ -52,8 +116,8 @@ export interface UserInfo {
   account_status: string;
   role: string;
   local_government?: string; // UUID of the local government for LG admins
-  groups: any[];
-  user_permissions: any[];
+  groups: string[];
+  user_permissions: string[];
 }
 
 class AuthService {
@@ -62,7 +126,7 @@ class AuthService {
     if (USE_MOCK) {
       const mockResponse = await mockAuthService.login(
         credentials.email,
-        credentials.password
+        credentials.password,
       );
 
       // Store tokens and user data
@@ -75,16 +139,34 @@ class AuthService {
 
     // Real API call to /auth/login
     try {
-      const response = await apiClient.post<{
-        message: string;
-        user_id: string;
-        role: string;
-        "refresh-token": string;
-        "access-token": string;
-      }>("/auth/login", {
+      const response = await apiClient.post("/auth/login", {
         email: credentials.email,
         password: credentials.password,
       });
+
+      const loginPayload = toLoginPayload(response.data);
+
+      const accessToken =
+        loginPayload?.["access-token"] ||
+        loginPayload?.access_token ||
+        loginPayload?.access;
+      const refreshToken =
+        loginPayload?.["refresh-token"] ||
+        loginPayload?.refresh_token ||
+        loginPayload?.refresh;
+      const userId =
+        loginPayload?.user_id || loginPayload?.id || loginPayload?.user?.id;
+      const backendRole = loginPayload?.role || loginPayload?.user?.role;
+
+      if (
+        !loginPayload ||
+        !accessToken ||
+        !refreshToken ||
+        !userId ||
+        !backendRole
+      ) {
+        throw new Error("Invalid login response format");
+      }
 
       // Map backend role format to frontend format
       const mapRole = (backendRole: string): UserRole => {
@@ -96,12 +178,12 @@ class AuthService {
 
       // Map API response to internal format (tokens and user data are at root level)
       const loginData: LoginResponse = {
-        access: response.data["access-token"],
-        refresh: response.data["refresh-token"],
+        access: accessToken,
+        refresh: refreshToken,
         user: {
-          id: response.data.user_id,
+          id: userId,
           email: credentials.email,
-          role: mapRole(response.data.role),
+          role: mapRole(backendRole),
           name: credentials.email.split("@")[0], // Extract name from email
         },
       };
@@ -128,46 +210,51 @@ class AuthService {
       } catch (error) {
         console.warn(
           "Failed to fetch user details, using email as name:",
-          error
+          error,
         );
       }
 
       return loginData;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const authError = toAuthServiceError(error);
+
       // Log the full error for debugging
       console.error("Login error details:", {
-        status: error.response?.status,
-        statusText: error.response?.statusText,
-        data: error.response?.data,
-        message: error.message,
+        status: authError.response?.status,
+        statusText: authError.response?.statusText,
+        data: authError.response?.data,
+        message: authError.message,
         config: {
-          url: error.config?.url,
-          method: error.config?.method,
-          baseURL: error.config?.baseURL,
+          url: authError.config?.url,
+          method: authError.config?.method,
+          baseURL: authError.config?.baseURL,
         },
       });
 
       let message = "Login failed";
 
-      if (error.response?.status === 400) {
-        message = error.response?.data?.message || "Invalid email or password";
-      } else if (error.response?.status === 401) {
-        message = error.response?.data?.message || "Invalid credentials";
-      } else if (error.response?.status === 403) {
+      if (authError.response?.status === 400) {
+        message =
+          authError.response?.data?.message || "Invalid email or password";
+      } else if (authError.response?.status === 401) {
+        message = authError.response?.data?.message || "Invalid credentials";
+      } else if (authError.response?.status === 403) {
         message = "Account is not active or verified";
-      } else if (error.response?.status === 404) {
+      } else if (authError.response?.status === 404) {
         message = "User not found";
-      } else if (error.response?.status === 429) {
+      } else if (authError.response?.status === 429) {
         message = "Too many login attempts. Please try again later.";
-      } else if (error.response?.status >= 500) {
+      } else if ((authError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       } else if (
-        error.code === "ECONNABORTED" ||
-        error.code === "ERR_NETWORK"
+        authError.code === "ECONNABORTED" ||
+        authError.code === "ERR_NETWORK"
       ) {
         message = "Network error. Please check your connection and try again.";
-      } else if (!error.response) {
-        message = `Connection failed: ${error.message}`;
+      } else if (authError.message === "Invalid login response format") {
+        message = "Login failed: unexpected server response format.";
+      } else if (!authError.response) {
+        message = `Connection failed: ${authError.message || "Unknown error"}`;
       }
 
       throw new Error(message);
@@ -211,7 +298,9 @@ class AuthService {
     formData.append("email", data.email);
     formData.append("phone_number", data.phone_number);
     formData.append("password", data.password);
-    formData.append("nin", data.nin);
+    if (data.nin) {
+      formData.append("nin", data.nin);
+    }
 
     try {
       const response = await apiClient.post<{
@@ -246,9 +335,10 @@ class AuthService {
           nin: data.nin,
         },
       };
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const authError = toAuthServiceError(error);
       // Enhanced error handling for specific API error responses
-      const errorData = error.response?.data;
+      const errorData = authError.response?.data;
 
       // Map specific API error messages to user-friendly format
       if (errorData?.error) {
@@ -281,7 +371,7 @@ class AuthService {
       }
 
       // Re-throw original error if no specific mapping found
-      throw error;
+      throw new Error(authError.message || "Registration failed");
     }
   }
 
@@ -290,6 +380,7 @@ class AuthService {
     if (USE_MOCK) {
       await mockAuthService.logout();
       tokenManager.clearTokens();
+      sessionStorage.removeItem("userPermissions");
       return;
     }
 
@@ -314,6 +405,7 @@ class AuthService {
       // Still clear tokens even if API call fails
     } finally {
       tokenManager.clearTokens();
+      sessionStorage.removeItem("userPermissions");
     }
   }
 
@@ -342,7 +434,7 @@ class AuthService {
 
   async sendPasswordResetEmail(
     email: string,
-    deviceType: string = "web"
+    deviceType: string = "web",
   ): Promise<{ message: string; email_status: string }> {
     const response = await apiClient.post<{
       message: string;
@@ -358,7 +450,7 @@ class AuthService {
     email: string,
     password1: string,
     password2: string,
-    token: string
+    token: string,
   ): Promise<{ message: string }> {
     const response = await apiClient.post<{
       message: string;
@@ -373,20 +465,22 @@ class AuthService {
   async verifyInviteToken(token: string): Promise<{ message: string }> {
     try {
       const response = await apiClient.post<{ message: string }>(
-        `/token/verify/${token}`
+        `/token/verify/${token}`,
       );
       return response.data;
-    } catch (error: any) {
+    } catch (error: unknown) {
+      const authError = toAuthServiceError(error);
       let message = "Failed to verify token";
 
-      if (error.response?.status === 400) {
-        message = error.response?.data?.detail || "Invalid token";
-      } else if (error.response?.status === 401) {
-        message = error.response?.data?.detail || "Missing or malformed token";
-      } else if (error.response?.status === 404) {
+      if (authError.response?.status === 400) {
+        message = authError.response?.data?.detail || "Invalid token";
+      } else if (authError.response?.status === 401) {
         message =
-          error.response?.data?.detail || "Token not found or already used";
-      } else if (error.response?.status >= 500) {
+          authError.response?.data?.detail || "Missing or malformed token";
+      } else if (authError.response?.status === 404) {
+        message =
+          authError.response?.data?.detail || "Token not found or already used";
+      } else if ((authError.response?.status || 0) >= 500) {
         message = "Server error. Please try again later.";
       }
 
@@ -397,7 +491,7 @@ class AuthService {
   async changePassword(
     currentPassword: string,
     newPassword: string,
-    confirmPassword: string
+    confirmPassword: string,
   ): Promise<{ message: string }> {
     const response = await apiClient.post<{
       message: string;
