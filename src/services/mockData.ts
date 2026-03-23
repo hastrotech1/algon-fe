@@ -5,6 +5,8 @@ import type {
   LocalGovernment,
   AuditLogEntry,
   MonthlyData,
+  LoginCredentials,
+  RegisterFormData,
 } from "../Types/types";
 
 // ============================================================================
@@ -181,24 +183,28 @@ export const mockDynamicFields: DynamicField[] = [
   {
     id: "1",
     field_label: "Letter from Traditional Ruler",
+    field_name: "letter_from_traditional_ruler",
     field_type: "file",
     is_required: true,
   },
   {
     id: "2",
     field_label: "Proof of Residence",
+    field_name: "proof_of_residence",
     field_type: "file",
     is_required: true,
   },
   {
     id: "3",
     field_label: "Community Leader Endorsement",
+    field_name: "community_leader_endorsement",
     field_type: "text",
     is_required: false,
   },
   {
     id: "4",
     field_label: "Years of Residence",
+    field_name: "years_of_residence",
     field_type: "number",
     is_required: true,
   },
@@ -618,14 +624,36 @@ export const mockCertificateData = {
 // ============================================================================
 
 export const mockAuthService = {
-  async login(credentials: any) {
+  async login(credentials: Pick<LoginCredentials, "email">) {
     await delay(1000);
 
     const email = credentials.email.toLowerCase();
 
     // Determine role based on email
     let role: "applicant" | "lg_admin" | "super_admin" = "applicant";
-    let user: any;
+    let user:
+      | {
+          id: number;
+          email: string;
+          firstName: string;
+          lastName: string;
+          role: "super_admin";
+        }
+      | {
+          id: number;
+          email: string;
+          firstName: string;
+          lastName: string;
+          role: "lg_admin";
+          lg: string;
+        }
+      | {
+          id: number;
+          email: string;
+          firstName: string;
+          lastName: string;
+          role: "applicant";
+        };
 
     // ✅ Check for super admin first (most specific)
     if (email.includes("superadmin")) {
@@ -671,7 +699,9 @@ export const mockAuthService = {
     };
   },
 
-  async register(data: any) {
+  async register(
+    data: RegisterFormData & { firstName?: string; lastName?: string },
+  ) {
     await delay(1000);
 
     return {

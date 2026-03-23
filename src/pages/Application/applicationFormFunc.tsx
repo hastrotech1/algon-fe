@@ -32,7 +32,10 @@ export function ApplicationForm() {
   const [isInitializingPayment, setIsInitializingPayment] = useState(false);
   const [paymentReference, setPaymentReference] = useState<string>("");
   const [applicationId, setApplicationId] = useState<string>("");
-  const [certificateAmount, setCertificateAmount] = useState<number>(0);
+  const [certificateAmount, setCertificateAmount] = useState<number | null>(
+    null,
+  );
+  const [isFeeLoading, setIsFeeLoading] = useState(false);
 
   // States and LGAs
   const [states, setStates] = useState<any[]>([]);
@@ -173,36 +176,6 @@ export function ApplicationForm() {
     }
   };
 
-  // Fetch certificate fees (called when moving to step 3)
-  const fetchCertificateFees = async () => {
-    if (!applicationId) {
-      toast.error("Application ID not found. Please start over.");
-      return false;
-    }
-
-    setIsSubmitting(true);
-    try {
-      // Fetch fees by calling the step 2 endpoint again
-      const response = await applicationService.updateApplicationStep2(
-        applicationId,
-        {
-          residential_address: formData.address,
-          landmark: formData.landmark,
-        },
-      );
-
-      const fee = response.data.fee.application_fee || 0;
-      setCertificateAmount(fee);
-      return true;
-    } catch (error: any) {
-      console.error("Failed to fetch fees:", error);
-      toast.error("Failed to load payment information. Please try again.");
-      return false;
-    } finally {
-      setIsSubmitting(false);
-    }
-  };
-
   // Step 2: Update application with address and move to next step
   const handleStep2Next = async () => {
     if (!validateCurrentStep()) return;
@@ -214,6 +187,7 @@ export function ApplicationForm() {
     }
 
     setIsSubmitting(true);
+    setIsFeeLoading(true);
 
     try {
       // Update application with address (Step 2 API call)
@@ -224,6 +198,22 @@ export function ApplicationForm() {
           landmark: formData.landmark,
         },
       );
+
+      const rawFee = step2Response?.data?.fee?.application_fee;
+      const fetchedFee =
+        typeof rawFee === "number"
+          ? rawFee
+          : typeof rawFee === "string"
+            ? Number.parseFloat(rawFee)
+            : Number.NaN;
+
+      if (!Number.isFinite(fetchedFee)) {
+        setCertificateAmount(null);
+        toast.error("Unable to load certificate fee. Please try again.");
+        return;
+      }
+
+      setCertificateAmount(fetchedFee);
 
       toast.success("Application updated successfully!");
       setCurrentStep(3);
@@ -261,6 +251,7 @@ export function ApplicationForm() {
       toast.error(errorMessage);
     } finally {
       setIsSubmitting(false);
+      setIsFeeLoading(false);
     }
   };
 
@@ -269,6 +260,11 @@ export function ApplicationForm() {
     if (!applicationId) {
       toast.error("Application ID not found. Please start over.");
       setCurrentStep(1);
+      return;
+    }
+
+    if (isFeeLoading || certificateAmount === null) {
+      toast.error("Payment fee is still loading. Please try again shortly.");
       return;
     }
 
@@ -317,13 +313,13 @@ export function ApplicationForm() {
         application_id: applicationId,
       });
 
-      if (!result.data.status) {
+      if (!result.status) {
         toast.error("Failed to initialize payment");
         setIsInitializingPayment(false);
         return;
       }
 
-      setPaymentReference(result.data.data.reference);
+      setPaymentReference(result.data.reference);
 
       const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
 
@@ -335,7 +331,7 @@ export function ApplicationForm() {
 
       const handler = (window as any).PaystackPop.setup({
         key: paystackKey,
-        access_code: result.data.data.access_code,
+        access_code: result.data.access_code,
         callback: (response: any) => {
           setPaymentReference(response.reference);
           toast.success("Payment successful!");
@@ -421,12 +417,6 @@ export function ApplicationForm() {
       handleStep1Next();
     } else if (currentStep === 2) {
       handleStep2Next();
-    } else if (currentStep === 3) {
-      // Fetch fees before showing payment section
-      const feesLoaded = await fetchCertificateFees();
-      if (feesLoaded && validateCurrentStep()) {
-        // Fees are loaded, payment section is ready
-      }
     } else if (validateCurrentStep()) {
       if (currentStep < totalSteps) {
         setCurrentStep(currentStep + 1);
@@ -481,7 +471,8 @@ export function ApplicationForm() {
       ninSlipError={ninSlip.error}
       handleNinSlipUpload={ninSlip.handleUpload}
       removeNinSlip={() => ninSlip.remove()}
-      certificateAmount={certificateAmount || 5500}
+      certificateAmount={certificateAmount}
+      isFeeLoading={isFeeLoading}
       paymentReference={paymentReference}
       isInitializingPayment={isInitializingPayment}
       handleProceedToPayment={handleProceedToPayment}

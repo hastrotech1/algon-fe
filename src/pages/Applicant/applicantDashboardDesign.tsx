@@ -25,7 +25,8 @@ import {
   TableHeader,
   TableRow,
 } from "../../components/ui/table";
-import type { Application } from "../../Types/types";
+import { Badge } from "../../components/ui/badge";
+import type { Application, MyCertificate } from "../../Types/types";
 
 // ============================================================================
 // PROPS INTERFACES
@@ -35,6 +36,7 @@ interface ApplicantDashboardDesignProps {
   activeTab: "overview" | "applications" | "certificates";
   setActiveTab: (tab: "overview" | "applications" | "certificates") => void;
   applications: Application[];
+  certificates: MyCertificate[];
   currentApplication: Application | null;
   stats: {
     total: number;
@@ -61,6 +63,7 @@ export function ApplicantDashboardDesign({
   activeTab,
   setActiveTab,
   applications,
+  certificates,
   currentApplication,
   stats,
   userName,
@@ -146,7 +149,10 @@ export function ApplicantDashboardDesign({
         )}
 
         {activeTab === "certificates" && (
-          <CertificatesTab onNavigate={onNavigate} />
+          <CertificatesTab
+            certificates={certificates}
+            onNavigate={onNavigate}
+          />
         )}
       </div>
     </div>
@@ -364,6 +370,7 @@ function ApplicationsTab({
               <TableHead>Application ID</TableHead>
               <TableHead>Local Government</TableHead>
               <TableHead>Status</TableHead>
+              <TableHead>Date Processed</TableHead>
               <TableHead>Date Applied</TableHead>
               <TableHead>Payment</TableHead>
               <TableHead>Action</TableHead>
@@ -411,10 +418,61 @@ function ApplicationsTab({
 
 // Certificates Tab
 interface CertificatesTabProps {
+  certificates: MyCertificate[];
   onNavigate: (page: string) => void;
 }
 
-function CertificatesTab({ onNavigate }: CertificatesTabProps) {
+function CertificatesTab({ certificates, onNavigate }: CertificatesTabProps) {
+  const getExpiryStatus = (expiryDate: string) => {
+    const now = new Date();
+    const expiry = new Date(expiryDate);
+
+    const nowUTC = new Date(
+      Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()),
+    );
+    const expiryUTC = new Date(
+      Date.UTC(
+        expiry.getUTCFullYear(),
+        expiry.getUTCMonth(),
+        expiry.getUTCDate(),
+      ),
+    );
+
+    const diffMs = expiryUTC.getTime() - nowUTC.getTime();
+    const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+    if (diffDays < 0) {
+      return {
+        text: "Expired",
+        className: "text-red-600",
+      };
+    }
+
+    if (diffDays <= 7) {
+      return {
+        text: `Expiring in ${diffDays} day${diffDays === 1 ? "" : "s"}`,
+        className: "text-amber-600",
+      };
+    }
+
+    return {
+      text: "Valid",
+      className: "text-green-600",
+    };
+  };
+
+  const formatDisplayDate = (dateString: string) => {
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) {
+      return "N/A";
+    }
+    return date.toLocaleDateString("en-NG", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
+
   return (
     <Card className="rounded-xl">
       <CardHeader>
@@ -422,31 +480,58 @@ function CertificatesTab({ onNavigate }: CertificatesTabProps) {
         <CardDescription>Download your approved certificates</CardDescription>
       </CardHeader>
       <CardContent>
-        <div className="space-y-4">
-          <div className="border border-border rounded-xl p-6 flex justify-between items-center">
-            <div>
-              <div className="flex items-center gap-2">
-                <h4>Indigene Certificate - Ikeja LGA</h4>
-                <span className="text-xs bg-purple-100 text-purple-700 px-2 py-0.5 rounded">
-                  Digitized
-                </span>
-              </div>
-              <p className="text-sm text-muted-foreground mt-1">
-                Certificate ID: CERT-IKJ-2025-001
-              </p>
-              <p className="text-sm text-muted-foreground">
-                Issued: October 15, 2025
-              </p>
-              <p className="text-sm text-green-600 mt-2">
-                Valid • Available for download
-              </p>
-            </div>
-            <Button onClick={() => onNavigate("certificate-download")}>
-              <Download className="w-4 h-4 mr-2" />
-              Download
-            </Button>
+        {certificates.length === 0 ? (
+          <div className="text-sm text-muted-foreground">
+            No certificates available yet.
           </div>
-        </div>
+        ) : (
+          <div className="space-y-4">
+            {certificates.map((certificate) => {
+              const expiryStatus = getExpiryStatus(certificate.expiry_date);
+
+              return (
+                <div
+                  key={certificate.id}
+                  className="border border-border rounded-xl p-6 flex justify-between items-center gap-4"
+                >
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <h4>{certificate.certificate_number}</h4>
+                      {certificate.certificate_type === "digitized" ? (
+                        <Badge className="bg-purple-100 text-purple-700 hover:bg-purple-100">
+                          Digitized
+                        </Badge>
+                      ) : (
+                        <Badge>Original</Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-muted-foreground mt-1">
+                      Verification Code: {certificate.verification_code}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Issued: {formatDisplayDate(certificate.issue_date)}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      Expires: {formatDisplayDate(certificate.expiry_date)}
+                    </p>
+                    <p className={`text-sm mt-2 ${expiryStatus.className}`}>
+                      {expiryStatus.text}
+                      {certificate.is_downloadable
+                        ? " • Available for download"
+                        : " • Not downloadable"}
+                    </p>
+                  </div>
+                  {certificate.is_downloadable ? (
+                    <Button onClick={() => onNavigate("certificate-download")}>
+                      <Download className="w-4 h-4 mr-2" />
+                      Download
+                    </Button>
+                  ) : null}
+                </div>
+              );
+            })}
+          </div>
+        )}
       </CardContent>
     </Card>
   );
@@ -462,8 +547,8 @@ function ApplicationStep({ title, description, status }: ApplicationStepProps) {
             status === "completed"
               ? "bg-green-500"
               : status === "current"
-              ? "bg-primary"
-              : "bg-gray-200"
+                ? "bg-primary"
+                : "bg-gray-200"
           }`}
         >
           {status === "completed" && (

@@ -14,6 +14,7 @@ import {
 } from "../../services"; // ✅ Import services
 import { useAuth } from "../../hooks/useAuth";
 import { downloadCSV } from "../../utils/downloadHelpers";
+import { getBackendErrorMessage } from "../../utils/errorHelpers";
 
 export function LGAdminDashboard() {
   const navigate = useNavigate();
@@ -44,7 +45,151 @@ export function LGAdminDashboard() {
   const [digitizationOverview, setDigitizationOverview] = useState<any>(null);
   const [reportAnalytics, setReportAnalytics] = useState<any>(null);
   const [lgaFees, setLgaFees] = useState<any>(null);
+  const [dashboardMetrics, setDashboardMetrics] = useState<{
+    pending_applications: number;
+    approved_certificates: number;
+    rejected: number;
+    total_revenue: number;
+  } | null>(null);
+  const [localGovernmentName, setLocalGovernmentName] =
+    useState<string>("Local Government");
   const [isLoading, setIsLoading] = useState(true);
+
+  const normalizeApplicationRecord = (record: any): Application => ({
+    id: record?.id || "",
+    name: record?.full_name || record?.name || "Unknown Applicant",
+    nin: record?.nin || "N/A",
+    status:
+      record?.application_status ||
+      record?.status ||
+      (record?.verification_status === "approved" ? "approved" : "pending"),
+    payment: record?.payment_status || record?.payment || "unpaid",
+    dateProcessed: record?.approved_at || record?.updated_at || "Pending",
+    dateApplied: record?.created_at || "N/A",
+    village: record?.village || "N/A",
+    lga:
+      typeof record?.local_government === "object"
+        ? record?.local_government?.name || "N/A"
+        : record?.local_government || record?.lga || "N/A",
+    state:
+      typeof record?.state === "object"
+        ? record?.state?.name || "N/A"
+        : record?.state || "N/A",
+    email: record?.email,
+    phone: record?.phone_number || record?.phone,
+  });
+
+  const normalizeDigitizationRecord = (record: any): DigitizationRequest => ({
+    id: record?.id || "",
+    name: record?.full_name || record?.name || "Unknown Applicant",
+    nin: record?.nin || "N/A",
+    status:
+      record?.verification_status ||
+      record?.application_status ||
+      record?.status ||
+      "pending",
+    payment: record?.payment_status || record?.payment || "unpaid",
+    date: record?.created_at || record?.date || "N/A",
+    certificateRef:
+      record?.certificate_reference_number || record?.certificateRef || "",
+    uploadPreview:
+      record?.uploaded_certificate ||
+      record?.uploadPreview ||
+      "No upload available",
+  });
+
+  const toMetricNumber = (metric: unknown): number => {
+    if (typeof metric === "number") {
+      return metric;
+    }
+
+    if (
+      typeof metric === "object" &&
+      metric !== null &&
+      typeof (metric as { value?: unknown }).value === "number"
+    ) {
+      return (metric as { value: number }).value;
+    }
+
+    return 0;
+  };
+
+  const normalizeWeeklyApplications = (weeklyApplications: any): any[] => {
+    if (Array.isArray(weeklyApplications)) {
+      return weeklyApplications.map((item: any, index: number) => ({
+        name: item.name || item.day || item.label || `Item ${index + 1}`,
+        value:
+          typeof item.value === "number"
+            ? item.value
+            : typeof item.total === "number"
+              ? item.total
+              : 0,
+      }));
+    }
+
+    if (typeof weeklyApplications === "number") {
+      return [{ name: "This Week", value: weeklyApplications }];
+    }
+
+    return [];
+  };
+
+  const normalizeApprovalStatistics = (
+    approvalStatistics: any,
+    metricCards: any,
+  ) => {
+    if (Array.isArray(approvalStatistics)) {
+      return approvalStatistics.map((item: any, index: number) => ({
+        name: item.name || item.label || `Status ${index + 1}`,
+        value:
+          typeof item.value === "number"
+            ? item.value
+            : typeof item.total === "number"
+              ? item.total
+              : 0,
+        color:
+          item.color || ["#10B981", "#F59E0B", "#EF4444"][index] || "#6B7280",
+      }));
+    }
+
+    if (approvalStatistics && typeof approvalStatistics === "object") {
+      return [
+        {
+          name: "Approved",
+          value: approvalStatistics.approved || 0,
+          color: "#10B981",
+        },
+        {
+          name: "Pending",
+          value: approvalStatistics.pending || 0,
+          color: "#F59E0B",
+        },
+        {
+          name: "Rejected",
+          value: approvalStatistics.rejected || 0,
+          color: "#EF4444",
+        },
+      ];
+    }
+
+    return [
+      {
+        name: "Approved",
+        value: metricCards?.approved_certificates?.value || 0,
+        color: "#10B981",
+      },
+      {
+        name: "Pending",
+        value: metricCards?.pending_applications?.value || 0,
+        color: "#F59E0B",
+      },
+      {
+        name: "Rejected",
+        value: metricCards?.rejected?.value || 0,
+        color: "#EF4444",
+      },
+    ];
+  };
 
   // ✅ Fetch data on mount and when pagination changes
   useEffect(() => {
@@ -57,29 +202,62 @@ export function LGAdminDashboard() {
     try {
       // ✅ Load different data based on active tab
       if (activeTab === "dashboard") {
-        const [appsData, dashboardData] = await Promise.all([
-          adminService.getAllApplications({
-            limit: pageSize,
-            page: currentPage,
-          }),
-          adminService.getLGAdminDashboard(),
-        ]);
+        const dashboardResponse = await adminService.getLGAdminDashboard();
+        const dashboardData = dashboardResponse?.data || {};
+        const metricCards = dashboardData.metric_cards || {};
 
-        setApplications(appsData.results || []);
-        setTotalItems(appsData.count || 0);
-        setHasNext(!!appsData.next);
-        setHasPrevious(!!appsData.previous);
+        const recentApplications = Array.isArray(
+          dashboardData.recent_applications,
+        )
+          ? dashboardData.recent_applications.map(normalizeApplicationRecord)
+          : [];
 
-        // Extract chart data from dashboard response
-        setWeeklyData(dashboardData.charts?.weeklyApplications || []);
-        setApprovalData(dashboardData.charts?.approvalStats || []);
+        const dashboardLgaName =
+          (typeof dashboardData?.local_government === "string"
+            ? dashboardData.local_government
+            : dashboardData?.local_government?.name) ||
+          recentApplications[0]?.lga ||
+          localGovernmentName;
+        setLocalGovernmentName(dashboardLgaName);
+
+        setApplications(recentApplications);
+        setTotalItems(recentApplications.length);
+        setHasNext(false);
+        setHasPrevious(false);
+
+        setDashboardMetrics({
+          pending_applications: toMetricNumber(
+            metricCards.pending_applications,
+          ),
+          approved_certificates: toMetricNumber(
+            metricCards.approved_certificates,
+          ),
+          rejected: toMetricNumber(metricCards.rejected),
+          total_revenue: toMetricNumber(metricCards.total_revenue),
+        });
+
+        setWeeklyData(
+          normalizeWeeklyApplications(dashboardData.weekly_applications),
+        );
+        setApprovalData(
+          normalizeApprovalStatistics(
+            dashboardData.approval_statistics,
+            metricCards,
+          ),
+        );
       } else if (activeTab === "applications") {
         const data = await adminService.getAllApplications({
           limit: pageSize,
           page: currentPage,
           status: statusFilter !== "all" ? statusFilter : undefined,
         });
-        setApplications(data.results || []);
+        const applicationRows = Array.isArray(data.results)
+          ? data.results.map(normalizeApplicationRecord)
+          : [];
+        setApplications(applicationRows);
+        if (applicationRows.length > 0 && applicationRows[0].lga) {
+          setLocalGovernmentName(applicationRows[0].lga);
+        }
         setTotalItems(data.count || 0);
         setHasNext(!!data.next);
         setHasPrevious(!!data.previous);
@@ -94,7 +272,10 @@ export function LGAdminDashboard() {
         ]);
 
         setDigitizationOverview(overviewData.data || null);
-        setDigitizationRequests(digitizationData.results || []);
+        const digitizationRows = Array.isArray(digitizationData.results)
+          ? digitizationData.results.map(normalizeDigitizationRecord)
+          : [];
+        setDigitizationRequests(digitizationRows);
         setTotalItems(digitizationData.count || 0);
         setHasNext(!!digitizationData.next);
         setHasPrevious(!!digitizationData.previous);
@@ -108,20 +289,29 @@ export function LGAdminDashboard() {
         ]);
         setDynamicFields(fields || []);
         setLgaFees(fees?.data?.[0] || null);
+        const feeLgaName = fees?.data?.[0]?.local_government;
+        if (feeLgaName) {
+          setLocalGovernmentName(feeLgaName);
+        }
       }
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to load dashboard data:", error);
-      toast.error(error.response?.data?.message || "Failed to load data");
+      toast.error(getBackendErrorMessage(error, "Failed to load data"));
     } finally {
       setIsLoading(false);
     }
   };
 
   const filteredApplications = applications.filter((app) => {
+    const normalizedSearchTerm = searchTerm.toLowerCase();
+    const name = (app.name || "").toLowerCase();
+    const nin = app.nin || "";
+    const applicationId = (app.id || "").toLowerCase();
+
     const matchesSearch =
-      app.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      app.nin.includes(searchTerm) ||
-      app.id.toLowerCase().includes(searchTerm.toLowerCase());
+      name.includes(normalizedSearchTerm) ||
+      nin.includes(searchTerm) ||
+      applicationId.includes(normalizedSearchTerm);
     const matchesStatus = statusFilter === "all" || app.status === statusFilter;
     const matchesDate =
       !dateFilter ||
@@ -150,14 +340,20 @@ export function LGAdminDashboard() {
   };
 
   // ✅ Real handler for adding dynamic field
-  const handleAddDynamicField = async (field: Omit<DynamicField, "id">) => {
+  const handleAddDynamicField = async (field: {
+    field_label: string;
+    field_name?: string;
+    is_required: boolean;
+    field_type: "text" | "number" | "date" | "file" | "dropdown";
+    dropdown_options?: string[];
+  }) => {
     try {
       const newField = await adminService.createDynamicField(field);
       setDynamicFields([...dynamicFields, newField]);
       toast.success("Field added successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to add field:", error);
-      toast.error(error.response?.data?.message || "Failed to add field");
+      toast.error(getBackendErrorMessage(error, "Failed to add field"));
     }
   };
 
@@ -182,13 +378,9 @@ export function LGAdminDashboard() {
         ),
       );
       toast.success("Field updated successfully");
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to update field:", error);
-      toast.error(
-        error.response?.data?.message ||
-          error.message ||
-          "Failed to update field",
-      );
+      toast.error(getBackendErrorMessage(error, "Failed to update field"));
     }
   };
 
@@ -207,10 +399,10 @@ export function LGAdminDashboard() {
               dynamicFields.filter((field) => field.id !== fieldId),
             );
             toast.success(`Field "${fieldLabel}" deleted successfully`);
-          } catch (error: any) {
+          } catch (error: unknown) {
             console.error("Failed to delete field:", error);
             toast.error(
-              error.response?.data?.message || "Failed to delete field",
+              getBackendErrorMessage(error, "Failed to delete field"),
             );
           }
         },
@@ -243,10 +435,21 @@ export function LGAdminDashboard() {
       // Extract fee data from response and update state
       const feeDataFromResponse = result?.data?.[0] || result?.data || null;
       setLgaFees(feeDataFromResponse);
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Failed to save fees:", error);
-      toast.error(error.message || "Failed to save fees", { id: loadingToast });
+      toast.error(getBackendErrorMessage(error, "Failed to save fees"), {
+        id: loadingToast,
+      });
     }
+  };
+
+  const handleUploadSignature = async (file: File) => {
+    await toast.promise(adminService.uploadSignature(file), {
+      loading: "Uploading signature...",
+      success: "Signature uploaded successfully",
+      error: (error: unknown) =>
+        getBackendErrorMessage(error, "Failed to upload signature"),
+    });
   };
 
   // ✅ Export applications as CSV
@@ -271,7 +474,7 @@ export function LGAdminDashboard() {
   const handleExportDigitization = async () => {
     try {
       await toast.promise(
-        adminService.exportCSV("digitization").then((blob) => {
+        adminService.exportCSV("digitizations").then((blob) => {
           downloadCSV(blob, "digitization-requests");
         }),
         {
@@ -282,6 +485,40 @@ export function LGAdminDashboard() {
       );
     } catch (error: any) {
       console.error("Export failed:", error);
+    }
+  };
+
+  const handleManageApplication = async (
+    applicationId: string,
+    applicationType: "certificate" | "digitization",
+    action: "approved" | "rejected",
+    remarks?: string,
+  ) => {
+    const actionLabel = action === "approved" ? "approved" : "rejected";
+    const loadingToast = toast.loading(
+      `${action === "approved" ? "Approving" : "Rejecting"} ${applicationType} request...`,
+    );
+
+    try {
+      await adminService.manageApplication(applicationId, {
+        application_type: applicationType,
+        action,
+        remarks,
+      });
+
+      toast.success(`Request ${actionLabel} successfully`, {
+        id: loadingToast,
+      });
+
+      await loadDashboardData();
+    } catch (error: unknown) {
+      toast.error(
+        getBackendErrorMessage(error, `Failed to ${actionLabel} request`),
+        {
+          id: loadingToast,
+        },
+      );
+      throw error;
     }
   };
 
@@ -311,9 +548,9 @@ export function LGAdminDashboard() {
       window.URL.revokeObjectURL(url);
 
       toast.success("Report downloaded successfully", { id: loadingToast });
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("Report download failed:", error);
-      toast.error(error.message || "Failed to download report", {
+      toast.error(getBackendErrorMessage(error, "Failed to download report"), {
         id: loadingToast,
       });
     }
@@ -418,13 +655,16 @@ export function LGAdminDashboard() {
       reportAnalytics={reportAnalytics}
       dynamicFields={dynamicFields}
       lgaFees={lgaFees}
+      dashboardMetrics={dashboardMetrics}
       weeklyData={weeklyData}
       approvalData={approvalData}
+      handleManageApplication={handleManageApplication}
       handleLogout={handleLogout}
       handleAddDynamicField={handleAddDynamicField}
       handleUpdateDynamicField={handleUpdateDynamicField}
       handleDeleteDynamicField={handleDeleteDynamicField}
       handleSaveFees={handleSaveFees}
+      handleUploadSignature={handleUploadSignature}
       handleExportApplications={handleExportApplications}
       handleExportDigitization={handleExportDigitization}
       handleDownloadReport={handleDownloadReport}
@@ -436,6 +676,7 @@ export function LGAdminDashboard() {
       hasPrevious={hasPrevious}
       onPageChange={handlePageChange}
       onPageSizeChange={handlePageSizeChange}
+      localGovernmentName={localGovernmentName}
       onNavigate={(page: string) => navigate(`/${page}`)}
     />
   );

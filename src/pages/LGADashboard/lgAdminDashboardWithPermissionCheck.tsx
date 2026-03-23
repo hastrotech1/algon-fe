@@ -28,14 +28,14 @@ export function LGAdminDashboardWithPermissionCheck({
       return;
     }
 
-    // Get user permissions from localStorage or auth context
+    // Get user permissions from sessionStorage or auth context
     const userPermissions = JSON.parse(
-      localStorage.getItem("userPermissions") || "[]"
+      sessionStorage.getItem("userPermissions") || "[]",
     );
 
     // Check if user has at least one of the required permissions
     const hasAccess = requiredPermissions.some((perm) =>
-      userPermissions.includes(perm)
+      userPermissions.includes(perm),
     );
 
     setHasPermission(hasAccess);
@@ -56,10 +56,10 @@ export function LGAdminDashboardWithPermissionCheck({
   if (!hasPermission) {
     // Get missing permissions for display
     const userPermissions = JSON.parse(
-      localStorage.getItem("userPermissions") || "[]"
+      sessionStorage.getItem("userPermissions") || "[]",
     );
     const missingPermissions = requiredPermissions.filter(
-      (perm) => !userPermissions.includes(perm)
+      (perm) => !userPermissions.includes(perm),
     );
 
     const permissionLabels: { [key: string]: string } = {
@@ -73,7 +73,7 @@ export function LGAdminDashboardWithPermissionCheck({
     };
 
     const displayMissingPermissions = missingPermissions.map(
-      (perm) => permissionLabels[perm] || perm
+      (perm) => permissionLabels[perm] || perm,
     );
 
     return (

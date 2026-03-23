@@ -1,23 +1,12 @@
-export const downloadCSV = async (
-  type: "applications" | "digitizations",
-  exportFunction: () => Promise<Blob>
-): Promise<void> => {
+export const downloadCSV = (blob: Blob, filename: string): void => {
   try {
-    const blob = await exportFunction();
-
-    // Create download link
     const url = window.URL.createObjectURL(blob);
     const link = document.createElement("a");
     link.href = url;
-    link.download = `${type}-export-${
-      new Date().toISOString().split("T")[0]
-    }.csv`;
+    link.download = filename.endsWith(".csv") ? filename : `${filename}.csv`;
 
-    // Trigger download
     document.body.appendChild(link);
     link.click();
-
-    // Cleanup
     document.body.removeChild(link);
     window.URL.revokeObjectURL(url);
   } catch (error) {

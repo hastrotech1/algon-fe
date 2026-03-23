@@ -8,7 +8,6 @@ import type { CertificateVerificationResponse } from "../../Types/types";
 type VerificationResult = "valid" | "invalid" | null;
 
 interface CertificateData {
-  holderName: string;
   certificateId: string;
   lga: string;
   state: string;
@@ -27,9 +26,7 @@ export function CertificateVerification() {
     useState<CertificateData | null>(null);
   const [isLoading, setIsLoading] = useState(false);
 
-  const handleVerify = async (e: React.FormEvent) => {
-    e.preventDefault();
-
+  const handleVerify = async () => {
     if (!certificateId.trim()) {
       toast.error("Please enter a certificate ID");
       return;
@@ -52,7 +49,6 @@ export function CertificateVerification() {
 
         // Map API response to local CertificateData format
         setCertificateData({
-          holderName: response.data.certificate_type || "Certificate Holder",
           certificateId: response.data.certificate_number,
           lga: "N/A", // May need to be added to API response
           state: "N/A", // May need to be added to API response
@@ -80,21 +76,21 @@ export function CertificateVerification() {
         toast.error(errorData?.message || "Invalid or missing certificate ID");
       } else if (status === 401 || status === 403) {
         toast.error(
-          "Authentication failed. Please log in to verify certificates."
+          "Authentication failed. Please log in to verify certificates.",
         );
       } else if (status === 404) {
         toast.error(
           errorData?.message ||
-            "Certificate not found. Please check the certificate ID."
+            "Certificate not found. Please check the certificate ID.",
         );
       } else if (status === 500) {
         toast.error(
-          "Server error occurred. Please try again later or contact support."
+          "Server error occurred. Please try again later or contact support.",
         );
       } else {
         toast.error(
           errorData?.message ||
-            "Failed to verify certificate. Please try again."
+            "Failed to verify certificate. Please try again.",
         );
       }
     } finally {

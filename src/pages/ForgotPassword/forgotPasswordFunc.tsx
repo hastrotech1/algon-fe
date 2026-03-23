@@ -8,6 +8,11 @@ export function ForgotPassword() {
   const [isLoading, setIsLoading] = useState(false);
   const [emailSent, setEmailSent] = useState(false);
 
+  const handleResetState = () => {
+    setEmailSent(false);
+    setIsLoading(false);
+  };
+
   const handleSubmit = async () => {
     if (!email.trim()) {
       toast.error("Please enter your email address");
@@ -68,6 +73,7 @@ export function ForgotPassword() {
       email={email}
       setEmail={setEmail}
       handleSubmit={handleSubmit}
+      handleResetState={handleResetState}
       isLoading={isLoading}
       emailSent={emailSent}
     />

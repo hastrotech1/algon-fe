@@ -14,7 +14,14 @@ import type {
   Application,
   DigitizationRequest,
   DynamicField,
+  ApplicationFormData,
+  DigitizationFormData,
+  OnboardingFormData,
+  InviteLGAdminRequest,
+  RegisterFormData,
+  ApplicationStatus,
 } from "../Types/types";
+import type { RegisterRequest } from "./auth.service";
 
 // Simulate network delay
 const delay = (ms: number = 500) =>
@@ -23,7 +30,7 @@ const delay = (ms: number = 500) =>
 // Mock Authentication
 // Mock Authentication
 export const mockAuthService = {
-  async login(email: string, password: string) {
+  async login(email: string, _password: string) {
     await delay();
 
     const emailLower = email.toLowerCase();
@@ -66,7 +73,7 @@ export const mockAuthService = {
     };
   },
 
-  async register(data: any) {
+  async register(data: RegisterFormData | RegisterRequest) {
     await delay();
 
     return {
@@ -77,7 +84,7 @@ export const mockAuthService = {
         email: data.email,
         role: "applicant" as const,
         name: "New User",
-        phone: data.phone,
+        phone: "phone" in data ? data.phone : data.phone_number,
         nin: data.nin,
       },
     };
@@ -91,7 +98,7 @@ export const mockAuthService = {
   async getCurrentUser() {
     await delay();
     // Return stored user data or default applicant
-    const userData = JSON.parse(localStorage.getItem("user_data") || "null");
+    const userData = JSON.parse(sessionStorage.getItem("user_data") || "null");
     return (
       userData || {
         id: "1",
@@ -105,7 +112,7 @@ export const mockAuthService = {
 
 // Mock Application Service
 export const mockApplicationService = {
-  async submitApplication(data: any) {
+  async submitApplication(data: ApplicationFormData) {
     await delay(1500);
 
     const newApp: Application = {
@@ -136,7 +143,7 @@ export const mockApplicationService = {
     return mockApplications.find((app) => app.id === id) || mockApplications[0];
   },
 
-  async getAllApplications(filters?: any) {
+  async getAllApplications(filters?: { status?: string }) {
     await delay();
 
     let filtered = [...mockApplications];
@@ -158,7 +165,7 @@ export const mockApplicationService = {
 
     const app = mockApplications.find((a) => a.id === id);
     if (app) {
-      app.status = status as any;
+      app.status = status as ApplicationStatus;
       app.dateProcessed = new Date().toISOString().split("T")[0];
     }
 
@@ -203,15 +210,15 @@ export const mockCertificateService = {
 
 // Mock Digitization Service
 export const mockDigitizationService = {
-  async submitDigitization(data: any) {
+  async submitDigitization(data: DigitizationFormData) {
     await delay(1500);
 
     const newReq: DigitizationRequest = {
       id: `DIGI-2025-${String(mockDigitizationRequests.length + 1).padStart(
         3,
-        "0"
+        "0",
       )}`,
-      name: data.fullName || "Applicant Name",
+      name: data.full_name || "Applicant Name",
       nin: data.nin,
       status: "pending",
       payment: "Paid",
@@ -228,8 +235,9 @@ export const mockDigitizationService = {
     return mockDigitizationRequests.slice(0, 2);
   },
 
-  async getAllDigitizationRequests(filters?: any) {
+  async getAllDigitizationRequests(filters?: { status?: string }) {
     await delay();
+    void filters;
     return {
       results: mockDigitizationRequests,
       count: mockDigitizationRequests.length,
@@ -241,7 +249,7 @@ export const mockDigitizationService = {
 
     const req = mockDigitizationRequests.find((r) => r.id === id);
     if (req) {
-      req.status = status as any;
+      req.status = status as ApplicationStatus;
     }
 
     return req;
@@ -250,8 +258,9 @@ export const mockDigitizationService = {
 
 // Mock Admin Service
 export const mockAdminService = {
-  async completeOnboarding(data: any) {
+  async completeOnboarding(data: OnboardingFormData) {
     await delay(1000);
+    void data;
     return { success: true, message: "Onboarding completed" };
   },
 
@@ -271,7 +280,15 @@ export const mockAdminService = {
     return newField;
   },
 
-  async updateDynamicField(fieldId: string, fieldData: any) {
+  async updateDynamicField(
+    fieldId: string,
+    fieldData: {
+      field_label: string;
+      field_name: string;
+      is_required: boolean;
+      field_type: string;
+    },
+  ) {
     await delay();
     return { ...fieldData, id: fieldId };
   },
@@ -312,21 +329,28 @@ export const mockAdminService = {
     };
   },
 
-  async updateSettings(settings: any) {
+  async updateSettings(settings: {
+    processingTimeDays?: number;
+    applicationFee?: number;
+    processingFee?: number;
+    autoApproval?: boolean;
+  }) {
     await delay();
     return { success: true, ...settings };
   },
 
-  async getAllLGAs(filters?: any) {
+  async getAllLGAs(filters?: { status?: string; state?: string }) {
     await delay();
+    void filters;
     return {
       message: "Local governments retrieved successfully",
       data: mockLocalGovernments,
     };
   },
 
-  async createLGAdmin(data: any) {
+  async createLGAdmin(data: InviteLGAdminRequest) {
     await delay(1000);
+    void data;
     return { success: true, message: "LG Admin created" };
   },
 
@@ -335,8 +359,9 @@ export const mockAdminService = {
     return { success: true };
   },
 
-  async getAuditLog(filters?: any) {
+  async getAuditLog(filters?: { page?: number; limit?: number }) {
     await delay();
+    void filters;
     return {
       results: mockAuditLog,
       count: mockAuditLog.length,
@@ -350,24 +375,24 @@ export const mockAdminService = {
         total_lgas: mockLocalGovernments.length,
         total_applications: mockApplications.length,
         total_certificates: mockApplications.filter(
-          (a) => a.status === "approved"
+          (a) => a.status === "approved",
         ).length,
         total_revenue: mockLocalGovernments.reduce(
           (sum, lga) => sum + lga.revenue,
-          0
+          0,
         ),
       },
       monthly_applications: mockMonthlyData.map((item) => ({
         month: `2024-${String(mockMonthlyData.indexOf(item) + 1).padStart(
           2,
-          "0"
+          "0",
         )}-01`,
         total: item.applications,
       })),
       monthly_revenue: mockMonthlyData.map((item) => ({
         month: `2024-${String(mockMonthlyData.indexOf(item) + 1).padStart(
           2,
-          "0"
+          "0",
         )}-01`,
         total: item.applications * 5500,
       })),
@@ -379,19 +404,63 @@ export const mockAdminService = {
     return {
       metric_cards: {
         pending_applications: mockApplications.filter(
-          (a) => a.status === "pending"
+          (a) => a.status === "pending",
         ).length,
         approved_certificates: mockApplications.filter(
-          (a) => a.status === "approved"
+          (a) => a.status === "approved",
         ).length,
         rejected_applications: mockApplications.filter(
-          (a) => a.status === "rejected"
+          (a) => a.status === "rejected",
         ).length,
         total_revenue:
           mockApplications.filter((a) => a.status === "approved").length * 5500,
       },
       weekly_data: mockWeeklyData,
       approval_data: mockApprovalData,
+    };
+  },
+
+  async getAllStates() {
+    await delay();
+
+    const groupedStates = mockLocalGovernments.reduce(
+      (acc, lga) => {
+        const stateId = lga.state.id;
+        if (!acc[stateId]) {
+          acc[stateId] = {
+            id: stateId,
+            name: lga.state.name,
+            code: null,
+            created_at: lga.created_at,
+            updated_at: lga.updated_at,
+            local_governtments: [],
+          };
+        }
+
+        acc[stateId].local_governtments.push({
+          id: lga.id,
+          name: lga.name,
+        });
+
+        return acc;
+      },
+      {} as Record<
+        string,
+        {
+          id: string;
+          name: string;
+          code: string | null;
+          created_at: string;
+          updated_at: string;
+          local_governtments: Array<{ id: string; name: string }>;
+        }
+      >,
+    );
+
+    return {
+      data: {
+        results: Object.values(groupedStates),
+      },
     };
   },
 };
@@ -401,11 +470,15 @@ export const mockAdminService = {
 // ============================================================================
 
 export const mockPaymentService = {
-  async initializePayment(data: any) {
+  async initializePayment(data: {
+    email: string;
+    amount: number;
+    metadata?: Record<string, unknown>;
+  }) {
     await delay(800);
 
     const reference = `PAY-${Date.now()}-${Math.floor(
-      Math.random() * 1000000
+      Math.random() * 1000000,
     )}`;
 
     console.log("Mock Payment Initialized:", {
@@ -426,7 +499,7 @@ export const mockPaymentService = {
     };
   },
 
-  async verifyPayment(data: any) {
+  async verifyPayment(data: { reference: string }) {
     await delay(1500);
 
     console.log("Mock Payment Verified:", data.reference);

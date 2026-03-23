@@ -16,6 +16,7 @@ interface ForgotPasswordDesignProps {
   email: string;
   setEmail: (email: string) => void;
   handleSubmit: () => void;
+  handleResetState: () => void;
   isLoading: boolean;
   emailSent: boolean;
 }
@@ -24,6 +25,7 @@ export function ForgotPasswordDesign({
   email,
   setEmail,
   handleSubmit,
+  handleResetState,
   isLoading,
   emailSent,
 }: ForgotPasswordDesignProps) {
@@ -89,7 +91,7 @@ export function ForgotPasswordDesign({
                   <Button
                     variant="ghost"
                     className="w-full rounded-lg"
-                    onClick={() => window.location.reload()}
+                    onClick={handleResetState}
                   >
                     Send Another Email
                   </Button>

@@ -72,7 +72,8 @@ interface ApplicationFormDesignProps {
   handleNinSlipUpload: (file: File) => void;
   removeNinSlip: () => void;
 
-  certificateAmount: number;
+  certificateAmount: number | null;
+  isFeeLoading: boolean;
   paymentReference: string;
   isInitializingPayment: boolean;
   handleProceedToPayment: () => void;
@@ -112,7 +113,8 @@ interface Step2Props {
 }
 
 interface Step3Props {
-  certificateAmount: number;
+  certificateAmount: number | null;
+  isFeeLoading: boolean;
   paymentReference: string;
   isInitializingPayment: boolean;
   handleProceedToPayment: () => void;
@@ -151,6 +153,7 @@ export function ApplicationFormDesign({
   handleNinSlipUpload,
   removeNinSlip,
   certificateAmount,
+  isFeeLoading,
   paymentReference,
   isInitializingPayment,
   handleProceedToPayment,
@@ -223,6 +226,7 @@ export function ApplicationFormDesign({
           {currentStep === 3 && (
             <Step3
               certificateAmount={certificateAmount}
+              isFeeLoading={isFeeLoading}
               paymentReference={paymentReference}
               isInitializingPayment={isInitializingPayment}
               handleProceedToPayment={handleProceedToPayment}
@@ -268,7 +272,11 @@ export function ApplicationFormDesign({
                     <Button
                       onClick={handleProceedToPayment}
                       className="ml-auto rounded-lg bg-primary hover:bg-primary/90"
-                      disabled={isInitializingPayment}
+                      disabled={
+                        isInitializingPayment ||
+                        isFeeLoading ||
+                        certificateAmount === null
+                      }
                     >
                       {isInitializingPayment ? (
                         <>
@@ -634,12 +642,15 @@ function Step2({ formData, setFormData }: Step2Props) {
 // Step 3: Payment
 function Step3({
   certificateAmount,
+  isFeeLoading,
   paymentReference,
   isInitializingPayment,
   handleProceedToPayment,
 }: Step3Props) {
   const processingFee = 500;
-  const applicationFee = certificateAmount - processingFee;
+  const totalAmount = certificateAmount ?? 0;
+  const applicationFee = Math.max(totalAmount - processingFee, 0);
+  const isFeeUnavailable = !isFeeLoading && certificateAmount === null;
 
   return (
     <>
@@ -654,28 +665,39 @@ function Step3({
         <div className="bg-secondary/20 rounded-xl p-6">
           <h4 className="font-semibold mb-4">Payment Summary</h4>
 
-          <div className="space-y-3">
-            <div className="flex justify-between items-center">
-              <span className="text-muted-foreground">
-                Certificate Application Fee
-              </span>
-              <span className="text-lg">
-                ₦{applicationFee.toLocaleString()}
-              </span>
+          {isFeeLoading ? (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="w-4 h-4 animate-spin" />
+              <span>Loading fee from API...</span>
             </div>
+          ) : isFeeUnavailable ? (
+            <p className="text-sm text-red-600">
+              Unable to load payment fee. Go back and try step 2 again.
+            </p>
+          ) : (
+            <div className="space-y-3">
+              <div className="flex justify-between items-center">
+                <span className="text-muted-foreground">
+                  Certificate Application Fee
+                </span>
+                <span className="text-lg">
+                  ₦{applicationFee.toLocaleString()}
+                </span>
+              </div>
 
-            <div className="flex justify-between items-center text-sm">
-              <span className="text-muted-foreground">Processing Fee</span>
-              <span>₦{processingFee.toLocaleString()}</span>
-            </div>
+              <div className="flex justify-between items-center text-sm">
+                <span className="text-muted-foreground">Processing Fee</span>
+                <span>₦{processingFee.toLocaleString()}</span>
+              </div>
 
-            <div className="border-t border-border pt-3 flex justify-between items-center">
-              <span className="font-semibold">Total Amount</span>
-              <span className="text-3xl font-bold text-primary">
-                ₦{certificateAmount.toLocaleString()}
-              </span>
+              <div className="border-t border-border pt-3 flex justify-between items-center">
+                <span className="font-semibold">Total Amount</span>
+                <span className="text-3xl font-bold text-primary">
+                  ₦{totalAmount.toLocaleString()}
+                </span>
+              </div>
             </div>
-          </div>
+          )}
         </div>
 
         {/* Payment Reference - Show after initialization */}

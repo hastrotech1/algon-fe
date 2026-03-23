@@ -1,45 +1,87 @@
 import apiClient from "./api";
 import { mockCertificateService } from "./mock.service"; // ✅ Import correct mock
-import type { CertificateVerificationResponse } from "../Types/types";
+import type {
+  CertificateVerificationResponse,
+  MyCertificate,
+} from "../Types/types";
 
 const USE_MOCK = false; // API integration enabled
 
+interface CertificateServiceErrorData {
+  message?: string;
+  error?: string;
+}
+
+interface CertificateServiceError {
+  response?: {
+    status?: number;
+    data?: Blob | CertificateServiceErrorData;
+  };
+}
+
+const toCertificateServiceError = (error: unknown): CertificateServiceError => {
+  if (typeof error === "object" && error !== null) {
+    return error as CertificateServiceError;
+  }
+  return {};
+};
+
 class CertificateService {
+  async getMyCertificates(): Promise<{
+    message: string;
+    data: MyCertificate[];
+  }> {
+    if (USE_MOCK) {
+      return {
+        message: "Certificates retrieved successfully",
+        data: [],
+      };
+    }
+
+    const response = await apiClient.get<{
+      message: string;
+      data: MyCertificate[];
+    }>("/my-certificates");
+
+    return response.data;
+  }
+
   async downloadCertificate(
-    certId: string,
+    certificateNumber: string,
     type: "certificate" | "digitization" = "certificate",
   ): Promise<Blob> {
     if (USE_MOCK) {
-      return mockCertificateService.downloadCertificate(certId); // ✅ Use correct mock
+      return mockCertificateService.downloadCertificate(certificateNumber); // ✅ Use correct mock
     }
 
     try {
-      const response = await apiClient.get(`/api/certificates/download/`, {
+      const response = await apiClient.get(`/my-certificates/download`, {
         params: {
-          cert_id: certId,
+          cert_id: certificateNumber,
           type: type,
         },
         responseType: "blob",
       });
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const certificateError = toCertificateServiceError(error);
+      const status = certificateError.response?.status;
 
       // Try to parse error message from blob response
       let message = "Failed to download certificate";
-      if (error.response?.data instanceof Blob) {
+      if (certificateError.response?.data instanceof Blob) {
         try {
-          const text = await error.response.data.text();
-          const errorData = JSON.parse(text);
+          const text = await certificateError.response.data.text();
+          const errorData = JSON.parse(text) as CertificateServiceErrorData;
           message = errorData.error || errorData.message || message;
         } catch (e) {
           // Keep default message if parsing fails
         }
       } else {
-        message =
-          error.response?.data?.error ||
-          error.response?.data?.message ||
-          message;
+        const responseData = certificateError.response?.data as
+          | CertificateServiceErrorData
+          | undefined;
+        message = responseData?.error || responseData?.message || message;
       }
 
       if (status === 400) {
@@ -80,20 +122,18 @@ class CertificateService {
     }
 
     try {
-      const response = await apiClient.post(
-        `/certificate/verify`,
-        { cert_id: certificateNumber },
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        },
-      );
+      const response = await apiClient.post(`/certificate/verify`, {
+        cert_id: certificateNumber,
+      });
       return response.data;
-    } catch (error: any) {
-      const status = error.response?.status;
+    } catch (error: unknown) {
+      const certificateError = toCertificateServiceError(error);
+      const status = certificateError.response?.status;
+      const responseData = certificateError.response?.data as
+        | CertificateServiceErrorData
+        | undefined;
       const message =
-        error.response?.data?.message || "Certificate verification failed";
+        responseData?.message || "Certificate verification failed";
 
       if (status === 400) {
         throw new Error(

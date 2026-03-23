@@ -153,6 +153,20 @@ export interface Certificate {
   downloadUrl?: string;
 }
 
+export interface MyCertificate {
+  id: string;
+  certificate_number: string;
+  certificate_type: "original" | "digitized";
+  issue_date: string;
+  expiry_date: string;
+  verification_code: string;
+  file_path: string;
+  is_revoked: boolean;
+  is_downloadable: boolean;
+  created_at: string;
+  application_type: "application" | "digitization";
+}
+
 export interface CertificateVerificationData {
   holderName: string;
   certificateId: string;
@@ -216,6 +230,7 @@ export interface LocalGovernment {
     name: string;
     id: string;
   };
+  // API contract typo is intentional: keep as "asigned_admin" (do not rename)
   asigned_admin?: {
     id: string;
     name: string;
@@ -247,6 +262,7 @@ export interface DynamicField {
   field_type: "text" | "number" | "date" | "file" | "dropdown";
   is_required: boolean;
   dropdown_options?: string[];
+  local_government?: { id: string; name: string } | string;
 }
 
 export interface DynamicFieldFormData {
@@ -273,12 +289,6 @@ export interface ChartDataPoint {
   name: string;
   value: number;
   [key: string]: string | number;
-}
-
-export interface MonthlyData {
-  month: string;
-  applications: number;
-  revenue?: number;
 }
 
 export interface ApprovalData {
@@ -630,12 +640,10 @@ export interface ApplicationListItem {
 
 export interface MyApplicationsResponse {
   message: string;
-  data: {
-    count: number;
-    next: string | null;
-    previous: string | null;
-    results: ApplicationListItem[];
-  };
+  data: ApplicationListItem[];
+  count?: number;
+  next?: string | null;
+  previous?: string | null;
 }
 
 export interface NINVerificationResponse {
@@ -649,16 +657,12 @@ export interface PaystackPaymentData {
 }
 
 export interface PaymentInitiationResponse {
-  status?: boolean;
+  status: boolean;
   message: string;
   data: {
-    status: boolean;
-    message: string;
-    data: {
-      authorization_url: string;
-      access_code: string;
-      reference: string;
-    };
+    authorization_url: string;
+    access_code: string;
+    reference: string;
     public_key?: string; // Optional: Paystack public key for inline checkout
   };
 }
@@ -883,8 +887,11 @@ export interface StateWithLGs {
   code: string | null;
   created_at: string;
   updated_at: string;
-  local_governtments: LocalGovernmentBasic[]; // Note: API has typo "governtments"
+  local_governtments: LocalGovernmentBasic[]; // API contract typo is intentional: keep as "local_governtments" (do not rename)
 }
+
+// Alias retained for existing usage; in StateWithLGAs the API typo "local_governtments" is intentional and must not be renamed.
+export type StateWithLGAs = StateWithLGs;
 
 export interface AllStatesResponse {
   message: string;

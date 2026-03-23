@@ -60,6 +60,7 @@ import {
   SelectValue,
 } from "../../components/ui/select";
 import type { LocalGovernment, AuditLog, MonthlyData } from "../../Types/types";
+import { adminService } from "../../services";
 
 interface SuperAdminDashboardDesignProps {
   activeTab: string;
@@ -412,12 +413,12 @@ function LGAsTab({
 
   const handleEditClick = async (lga: LocalGovernment) => {
     console.log("Edit clicked for LGA:", lga);
-    console.log("Assigned admin:", lga.assigned_admin);
+    console.log("Assigned admin:", lga.asigned_admin);
 
-    if (!lga.assigned_admin) {
+    if (!lga.asigned_admin) {
       const { toast } = await import("sonner");
       toast.error(
-        "No administrator assigned to this local government. Please invite an admin first."
+        "No administrator assigned to this local government. Please invite an admin first.",
       );
       return;
     }
@@ -494,7 +495,7 @@ function LGAsTab({
                     {lga.state?.name || "N/A"}
                   </TableCell>
                   <TableCell className="text-center align-middle">
-                    {lga.assigned_admin?.name || "Unassigned"}
+                    {lga.asigned_admin?.name || "Unassigned"}
                   </TableCell>
                   <TableCell className="text-center align-middle">
                     {lga.certificates?.certificates || 0}
@@ -511,9 +512,9 @@ function LGAsTab({
                         size="sm"
                         variant="outline"
                         onClick={() => handleEditClick(lga)}
-                        disabled={!lga.assigned_admin}
+                        disabled={!lga.asigned_admin}
                         title={
-                          !lga.assigned_admin
+                          !lga.asigned_admin
                             ? "No admin assigned"
                             : "Edit admin details"
                         }
@@ -563,11 +564,11 @@ function EditLGADialog({
 
   // Update form when LGA changes
   useEffect(() => {
-    if (lga && lga.assigned_admin) {
-      const nameParts = lga.assigned_admin.name.split(" ");
+    if (lga && lga.asigned_admin) {
+      const nameParts = lga.asigned_admin.name.split(" ");
       setFirstName(nameParts[0] || "");
       setLastName(nameParts.slice(1).join(" ") || "");
-      setEmail(lga.assigned_admin.email || "");
+      setEmail(lga.asigned_admin.email || "");
     } else {
       setFirstName("");
       setLastName("");
@@ -578,9 +579,9 @@ function EditLGADialog({
   const handleSubmit = async () => {
     console.log("Submit clicked");
     console.log("LGA:", lga);
-    console.log("Assigned admin:", lga?.assigned_admin);
+    console.log("Assigned admin:", lga?.asigned_admin);
 
-    if (!lga || !lga.assigned_admin) {
+    if (!lga || !lga.asigned_admin) {
       console.log("No LGA or assigned admin found");
       const { toast } = await import("sonner");
       toast.error("No administrator assigned to this local government");
@@ -596,16 +597,15 @@ function EditLGADialog({
 
     setIsLoading(true);
     try {
-      const { adminService } = await import("../../services");
       const { toast } = await import("sonner");
 
       console.log("Calling updateLGAdmin with:", {
-        adminId: lga.assigned_admin.id,
+        adminId: lga.asigned_admin.id,
         data: { first_name: firstName, last_name: lastName, email },
       });
 
       // Call the update service with admin ID
-      const result = await adminService.updateLGAdmin(lga.assigned_admin.id, {
+      const result = await adminService.updateLGAdmin(lga.asigned_admin.id, {
         first_name: firstName,
         last_name: lastName,
         email: email,
@@ -1083,7 +1083,6 @@ function AddLGADialog() {
   const loadStates = async () => {
     setLoadingStates(true);
     try {
-      const { adminService } = await import("../../services");
       const response = await adminService.getAllStatesAndLGs();
       const statesData = Array.isArray(response)
         ? response
@@ -1105,7 +1104,6 @@ function AddLGADialog() {
 
     setIsLoading(true);
     try {
-      const { adminService } = await import("../../services");
       const { toast } = await import("sonner");
       const { tokenManager } = await import("../../utils/tokenManager");
 

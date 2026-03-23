@@ -52,6 +52,7 @@ interface DigitizationFlowDesignProps {
   progress: number;
   formData: DigitizationFormData;
   setFormData: (data: DigitizationFormData) => void;
+  // Keep StateWithLGAs as-is because backend payload uses typo key "local_governtments".
   states: StateWithLGAs[];
   availableLGAs: any[];
   loadingStates: boolean;
@@ -95,6 +96,7 @@ interface DigitizationFlowDesignProps {
 interface Step1Props {
   formData: DigitizationFormData;
   setFormData: (data: DigitizationFormData) => void;
+  // Keep StateWithLGAs as-is because backend payload uses typo key "local_governtments".
   states: StateWithLGAs[];
   availableLGAs: any[];
   loadingStates: boolean;

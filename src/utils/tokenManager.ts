@@ -1,45 +1,57 @@
-const TOKEN_KEY = 'access_token';
-const REFRESH_TOKEN_KEY = 'refresh_token';
-const USER_KEY = 'user_data';
+const ACCESS_TOKEN_KEY = "access_token";
+const REFRESH_TOKEN_KEY = "refresh_token";
+const USER_KEY = "user_data";
+
+let accessTokenMemory: string | null = sessionStorage.getItem(ACCESS_TOKEN_KEY);
 
 export const tokenManager = {
-  // Access Token
   getAccessToken(): string | null {
-    return localStorage.getItem(TOKEN_KEY);
+    if (!accessTokenMemory) {
+      accessTokenMemory = sessionStorage.getItem(ACCESS_TOKEN_KEY);
+    }
+    return accessTokenMemory;
   },
 
   setAccessToken(token: string): void {
-    localStorage.setItem(TOKEN_KEY, token);
+    accessTokenMemory = token;
+    sessionStorage.setItem(ACCESS_TOKEN_KEY, token);
   },
 
-  // Refresh Token
+  clearAccessToken(): void {
+    accessTokenMemory = null;
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+  },
+
   getRefreshToken(): string | null {
-    return localStorage.getItem(REFRESH_TOKEN_KEY);
+    return sessionStorage.getItem(REFRESH_TOKEN_KEY);
   },
 
   setRefreshToken(token: string): void {
-    localStorage.setItem(REFRESH_TOKEN_KEY, token);
+    sessionStorage.setItem(REFRESH_TOKEN_KEY, token);
   },
 
-  // User Data
   getUserData(): any {
-    const userData = localStorage.getItem(USER_KEY);
+    const userData = sessionStorage.getItem(USER_KEY);
     return userData ? JSON.parse(userData) : null;
   },
 
   setUserData(user: any): void {
-    localStorage.setItem(USER_KEY, JSON.stringify(user));
+    sessionStorage.setItem(USER_KEY, JSON.stringify(user));
   },
 
-  // Clear all
   clearTokens(): void {
-    localStorage.removeItem(TOKEN_KEY);
-    localStorage.removeItem(REFRESH_TOKEN_KEY);
-    localStorage.removeItem(USER_KEY);
+    accessTokenMemory = null;
+    sessionStorage.removeItem(ACCESS_TOKEN_KEY);
+    sessionStorage.removeItem(REFRESH_TOKEN_KEY);
+    sessionStorage.removeItem(USER_KEY);
+    sessionStorage.removeItem("userPermissions");
   },
 
-  // Check if authenticated
+  canRefresh(): boolean {
+    return !!this.getRefreshToken();
+  },
+
   isAuthenticated(): boolean {
-    return !!this.getAccessToken();
+    return !!this.getAccessToken() || !!this.getRefreshToken();
   },
 };

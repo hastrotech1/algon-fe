@@ -46,7 +46,7 @@ export function SuperAdminDashboard() {
           console.log("Sample LGA (first item):", response.data?.[0]);
           console.log(
             "LGAs with assigned admins:",
-            response.data?.filter((lga: any) => lga.assigned_admin).length
+            response.data?.filter((lga: any) => lga.asigned_admin).length,
           );
           // API returns { message: "...", data: [...] }
           setLgas(response.data || []);
@@ -61,7 +61,7 @@ export function SuperAdminDashboard() {
               return;
             } else if (lgaError.message.includes("Access denied")) {
               toast.error(
-                "You do not have permission to view local governments."
+                "You do not have permission to view local governments.",
               );
             } else if (lgaError.message.includes("Too many requests")) {
               toast.error("Too many requests. Please wait a moment.");
@@ -84,9 +84,8 @@ export function SuperAdminDashboard() {
             ...auditLogFilters,
           });
 
-          // Handle both response structures
-          const results = data.data?.results || data.results || [];
-          const count = data.data?.count || data.count || 0;
+          const results = data.results || [];
+          const count = data.count || 0;
 
           setAuditLog(results);
           setAuditLogTotalCount(count);
@@ -99,7 +98,7 @@ export function SuperAdminDashboard() {
           // Handle specific HTTP status codes per API spec
           if (status === 400) {
             toast.error(
-              errorData?.message || "Invalid query parameters for audit logs"
+              errorData?.message || "Invalid query parameters for audit logs",
             );
           } else if (status === 401) {
             toast.error("Session expired. Please log in again.");
@@ -107,18 +106,18 @@ export function SuperAdminDashboard() {
             return;
           } else if (status === 403) {
             toast.error(
-              "You are not authorized to access audit logs. Super admin access required."
+              "You are not authorized to access audit logs. Super admin access required.",
             );
           } else if (status === 404) {
             console.warn("Audit logs endpoint not available yet");
             setAuditLog([]);
           } else if (status === 429) {
             toast.error(
-              "Too many requests. Please wait a moment before trying again."
+              "Too many requests. Please wait a moment before trying again.",
             );
           } else if (status >= 500) {
             toast.error(
-              "Server error occurred while loading audit logs. Please try again later."
+              "Server error occurred while loading audit logs. Please try again later.",
             );
           } else {
             toast.error(errorData?.message || "Failed to load audit logs");
@@ -128,49 +127,7 @@ export function SuperAdminDashboard() {
         }
       } else if (activeTab === "dashboard") {
         const response = await adminService.getSuperAdminDashboard();
-
-        // Check if response is HTML (backend doesn't support JWT authentication)
-        if (
-          typeof response === "string" &&
-          response.includes("<!DOCTYPE html>")
-        ) {
-          console.error(
-            "Backend returned HTML - endpoint doesn't support JWT authentication"
-          );
-          toast.error(
-            "Dashboard endpoint not configured for JWT authentication. Contact backend team.",
-            { duration: 5000 }
-          );
-          // Don't redirect - let user stay on dashboard with empty data
-          setDashboardStats(null);
-          setMonthlyData([]);
-          setMonthlyRevenueData([]);
-          return;
-        }
-
-        // Handle both response structures: with or without 'data' wrapper
-        let dashboardData = response.data || response;
-
-        // Check again if dashboardData is HTML
-        if (
-          typeof dashboardData === "string" &&
-          dashboardData.includes("<!DOCTYPE html>")
-        ) {
-          console.error(
-            "❌ Backend returned HTML - endpoint doesn't support JWT authentication"
-          );
-          toast.error(
-            "Dashboard endpoint not configured for JWT authentication. Contact backend team.",
-            { duration: 5000 }
-          );
-          // Don't redirect - let user stay on dashboard with empty data
-          setDashboardStats(null);
-          setMonthlyData([]);
-          setMonthlyRevenueData([]);
-          return;
-        }
-
-        dashboardData = response?.data || response;
+        const dashboardData = response?.data || response;
 
         // Store the full dashboard stats
         setDashboardStats(dashboardData);
@@ -221,7 +178,7 @@ export function SuperAdminDashboard() {
   const filteredLGAs = lgas.filter(
     (lga) =>
       lga.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      lga.id.toLowerCase().includes(searchTerm.toLowerCase())
+      lga.id.toLowerCase().includes(searchTerm.toLowerCase()),
   );
 
   const handleLogout = () => {
@@ -230,6 +187,7 @@ export function SuperAdminDashboard() {
         label: "Logout",
         onClick: () => {
           tokenManager.clearTokens();
+          sessionStorage.removeItem("userPermissions");
           navigate("/");
         },
       },
@@ -259,7 +217,7 @@ export function SuperAdminDashboard() {
     if (activeTab === "audit") {
       loadData();
     }
-  }, [auditLogPage, auditLogFilters]);
+  }, [activeTab, auditLogPage, auditLogFilters, auditLogPageSize]);
 
   // Show loading
   if (

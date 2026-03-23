@@ -291,7 +291,7 @@ const [isInitializingPayment, setIsInitializingPayment] = useState(false);
 ### **Potential Enhancements**
 
 1. **Auto-save Draft**
-   - Save form data to localStorage during Step 1
+   - Save form data to sessionStorage during Step 1
    - Restore on page refresh
 
 2. **Progress Persistence**
