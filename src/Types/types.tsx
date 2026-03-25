@@ -155,14 +155,17 @@ export interface Certificate {
 
 export interface MyCertificate {
   id: string;
+  application: string;
   certificate_number: string;
   certificate_type: "original" | "digitized";
   issue_date: string;
   expiry_date: string;
   verification_code: string;
-  file_path: string;
+  file_path: string | null;
+  qr_code?: string | null;
+  signature?: string | null;
   is_revoked: boolean;
-  is_downloadable: boolean;
+  is_downloadable?: boolean;
   created_at: string;
   application_type: "application" | "digitization";
 }

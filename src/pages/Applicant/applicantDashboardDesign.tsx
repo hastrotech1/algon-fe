@@ -393,7 +393,11 @@ function ApplicationsTab({
                   {app.status === "approved" ? (
                     <Button
                       size="sm"
-                      onClick={() => onNavigate("certificate-download")}
+                      onClick={() =>
+                        onNavigate(
+                          `/certificate-download?cert_id=${encodeURIComponent(app.id)}`,
+                        )
+                      }
                     >
                       Download
                     </Button>
@@ -488,6 +492,12 @@ function CertificatesTab({ certificates, onNavigate }: CertificatesTabProps) {
           <div className="space-y-4">
             {certificates.map((certificate) => {
               const expiryStatus = getExpiryStatus(certificate.expiry_date);
+              const canDownload =
+                certificate.is_downloadable ?? !certificate.is_revoked;
+              const downloadType =
+                certificate.application_type === "digitization"
+                  ? "digitization"
+                  : "certificate";
 
               return (
                 <div
@@ -516,13 +526,21 @@ function CertificatesTab({ certificates, onNavigate }: CertificatesTabProps) {
                     </p>
                     <p className={`text-sm mt-2 ${expiryStatus.className}`}>
                       {expiryStatus.text}
-                      {certificate.is_downloadable
+                      {canDownload
                         ? " • Available for download"
                         : " • Not downloadable"}
                     </p>
                   </div>
-                  {certificate.is_downloadable ? (
-                    <Button onClick={() => onNavigate("certificate-download")}>
+                  {canDownload ? (
+                    <Button
+                      onClick={() =>
+                        onNavigate(
+                          `/certificate-download?cert_id=${encodeURIComponent(
+                            certificate.certificate_number,
+                          )}&type=${downloadType}`,
+                        )
+                      }
+                    >
                       <Download className="w-4 h-4 mr-2" />
                       Download
                     </Button>

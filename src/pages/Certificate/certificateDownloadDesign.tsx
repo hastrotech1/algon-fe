@@ -16,6 +16,13 @@ interface CertificateDownloadDesignProps {
   isDigitized?: boolean;
   handleDownload: () => void;
   isDownloading: boolean;
+  certificateNumber?: string;
+  issueDate?: string;
+  verificationCode?: string;
+  fullName?: string;
+  dateOfBirth?: string;
+  localGovernment?: string;
+  state?: string;
 }
 
 export function CertificateDownloadDesign({
@@ -23,8 +30,32 @@ export function CertificateDownloadDesign({
   isDigitized = false,
   handleDownload,
   isDownloading,
+  certificateNumber,
+  issueDate,
+  verificationCode,
+  fullName,
+  dateOfBirth,
+  localGovernment,
+  state,
 }: CertificateDownloadDesignProps) {
   const navigate = useNavigate(); // ✅ Use hook for new navigation
+
+  const formatDisplayDate = (dateString?: string) => {
+    if (!dateString) {
+      return "N/A";
+    }
+
+    const date = new Date(dateString);
+    if (Number.isNaN(date.getTime())) {
+      return dateString;
+    }
+
+    return date.toLocaleDateString("en-NG", {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+    });
+  };
 
   return (
     <div className="min-h-screen bg-gradient-to-br from-secondary/10 to-white">
@@ -100,16 +131,16 @@ export function CertificateDownloadDesign({
                   <p className="text-sm text-muted-foreground mb-4">
                     This is to certify that
                   </p>
-                  <h3 className="text-primary mb-6">JOHN OLUWASEUN DOE</h3>
+                  <h3 className="text-primary mb-6">{fullName || "N/A"}</h3>
 
                   <p className="text-sm leading-relaxed text-muted-foreground mb-6">
                     is an indigene of{" "}
                     <span className="text-foreground">
-                      Ikeja Local Government Area
+                      {localGovernment || "N/A"}
                     </span>{" "}
-                    in <span className="text-foreground">Lagos State</span>,
-                    Federal Republic of Nigeria. This certificate is issued upon
-                    satisfactory verification of the applicant's claim to
+                    in <span className="text-foreground">{state || "N/A"}</span>
+                    , Federal Republic of Nigeria. This certificate is issued
+                    upon satisfactory verification of the applicant's claim to
                     indigeneship.
                   </p>
 
@@ -120,7 +151,7 @@ export function CertificateDownloadDesign({
                         <p className="text-xs text-muted-foreground">
                           Full Name
                         </p>
-                        <p className="text-sm">John Oluwaseun Doe</p>
+                        <p className="text-sm">{fullName || "N/A"}</p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -129,7 +160,9 @@ export function CertificateDownloadDesign({
                         <p className="text-xs text-muted-foreground">
                           Date of Birth
                         </p>
-                        <p className="text-sm">January 15, 1995</p>
+                        <p className="text-sm">
+                          {formatDisplayDate(dateOfBirth)}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -138,7 +171,10 @@ export function CertificateDownloadDesign({
                         <p className="text-xs text-muted-foreground">
                           Local Government
                         </p>
-                        <p className="text-sm">Ikeja LGA, Lagos State</p>
+                        <p className="text-sm">
+                          {localGovernment || "N/A"}
+                          {state ? `, ${state}` : ""}
+                        </p>
                       </div>
                     </div>
                     <div className="flex items-start gap-3">
@@ -147,7 +183,16 @@ export function CertificateDownloadDesign({
                         <p className="text-xs text-muted-foreground">
                           Certificate ID
                         </p>
-                        <p className="text-sm">CERT-IKJ-2025-001</p>
+                        <p className="text-sm">{certificateNumber || "N/A"}</p>
+                      </div>
+                    </div>
+                    <div className="flex items-start gap-3">
+                      <Shield className="w-5 h-5 text-primary mt-0.5" />
+                      <div>
+                        <p className="text-xs text-muted-foreground">
+                          Verification Code
+                        </p>
+                        <p className="text-sm">{verificationCode || "N/A"}</p>
                       </div>
                     </div>
                   </div>
@@ -171,7 +216,7 @@ export function CertificateDownloadDesign({
 
                   <div className="mt-6 text-center">
                     <p className="text-xs text-muted-foreground">
-                      Issue Date: October 15, 2025
+                      Issue Date: {formatDisplayDate(issueDate)}
                     </p>
                   </div>
                 </div>

@@ -14,6 +14,7 @@ import {
   adminService,
 } from "../../services";
 import { useFileUploadEnhanced } from "../../hooks/useFileUploadEnhanced";
+import { launchPaystackInitializedTransaction } from "../../utils/paystack";
 
 export function DigitizationFlow() {
   const navigate = useNavigate();
@@ -273,22 +274,12 @@ export function DigitizationFlow() {
       if (result.status) {
         setPaymentReference(result.data.reference);
 
-        // Use Paystack inline popup modal
-        const paystackKey =
-          result.data.public_key || import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-
-        if (!paystackKey) {
-          toast.error("Payment configuration error. Please contact support.");
-          setIsInitializingPayment(false);
-          return;
-        }
-
-        const handler = (window as any).PaystackPop.setup({
-          key: paystackKey,
-          email: formData.email,
-          amount: (digitizationAmount + 500) * 100, // Convert to kobo (NGN minor unit)
-          ref: result.data.reference,
+        await launchPaystackInitializedTransaction(
+          result.data.access_code,
+          result.data.authorization_url,
+          {
           callback: function (response: any) {
+            setPaymentReference(response.reference);
             toast.success(
               "Payment successful! Reference: " + response.reference,
             );
@@ -299,9 +290,8 @@ export function DigitizationFlow() {
               "Payment window closed. You can retry payment if needed.",
             );
           },
-        });
-
-        handler.openIframe();
+          },
+        );
       } else {
         toast.error(result.message || "Failed to initialize payment");
       }

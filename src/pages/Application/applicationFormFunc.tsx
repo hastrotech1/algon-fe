@@ -6,6 +6,7 @@ import type { ApplicationFormData } from "../../Types/types";
 import { validateApplicationForm } from "../../utils/validation";
 import { applicationService, adminService } from "../../services";
 import { useFileUploadEnhanced } from "../../hooks/useFileUploadEnhanced";
+import { launchPaystackInitializedTransaction } from "../../utils/paystack";
 
 export function ApplicationForm() {
   const navigate = useNavigate();
@@ -84,9 +85,9 @@ export function ApplicationForm() {
   });
 
   const ninSlip = useFileUploadEnhanced({
-    maxSizeMB: 5,
+    maxSizeMB: 2,
     allowedTypes: ["image/jpeg", "image/png", "application/pdf"],
-    compressImages: true,
+    compressImages: false,
     onUpload: (file) => setFormData({ ...formData, ninSlip: file }),
   });
 
@@ -321,17 +322,10 @@ export function ApplicationForm() {
 
       setPaymentReference(result.data.reference);
 
-      const paystackKey = import.meta.env.VITE_PAYSTACK_PUBLIC_KEY;
-
-      if (!paystackKey || !(window as any).PaystackPop) {
-        toast.error("Payment service unavailable. Please contact support.");
-        setIsInitializingPayment(false);
-        return;
-      }
-
-      const handler = (window as any).PaystackPop.setup({
-        key: paystackKey,
-        access_code: result.data.access_code,
+      await launchPaystackInitializedTransaction(
+        result.data.access_code,
+        result.data.authorization_url,
+        {
         callback: (response: any) => {
           setPaymentReference(response.reference);
           toast.success("Payment successful!");
@@ -340,9 +334,8 @@ export function ApplicationForm() {
         onClose: () => {
           toast.info("Payment cancelled");
         },
-      });
-
-      handler.openIframe();
+        },
+      );
     } catch (error: any) {
       console.error("Payment initialization error:", error);
       const errorMessage =

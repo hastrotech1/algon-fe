@@ -90,17 +90,42 @@ export function ApplicantDashboard() {
     setError(null);
 
     try {
-      const [applicationsResponse, certificatesResponse] = await Promise.all([
-        applicationService.getMyApplications({
+      const pageLimit = 50;
+      let pageOffset = 0;
+      let hasNextPage = true;
+      const allApplications: ApplicationApiItem[] = [];
+
+      while (hasNextPage) {
+        const pageResponse = await applicationService.getMyApplications({
           application_type: "certificate",
-        }),
+          limit: pageLimit,
+          offset: pageOffset,
+        });
+
+        const pageApplications = normalizeArrayPayload<ApplicationApiItem>(
+          pageResponse,
+        );
+
+        if (pageApplications.length === 0) {
+          break;
+        }
+
+        allApplications.push(...pageApplications);
+        hasNextPage = Boolean(pageResponse.next);
+        pageOffset += pageLimit;
+      }
+
+      const [{ data: certificatesData }] = await Promise.all([
         certificateService.getMyCertificates(),
       ]);
 
-      const applications =
-        normalizeArrayPayload<ApplicationApiItem>(applicationsResponse);
+      const uniqueApplications = Array.from(
+        new Map(allApplications.map((app) => [app.id, app])).values(),
+      );
+
+      const applications = uniqueApplications;
       const myCertificates =
-        normalizeArrayPayload<MyCertificate>(certificatesResponse);
+        normalizeArrayPayload<MyCertificate>(certificatesData);
 
       // Transform API response to match Application type
       const transformedApplications: Application[] = applications.map(
@@ -263,6 +288,11 @@ export function ApplicantDashboard() {
         stats={stats}
         userName={userName}
         onNavigate={(page: string) => {
+          if (page.startsWith("/certificate-download")) {
+            navigate(page);
+            return;
+          }
+
           const routes: Record<string, string> = {
             "application-form": "/application-form",
             "digitization-flow": "/digitization-flow",
